@@ -507,7 +507,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 4;
+var APP_VERSION = 5;
 var TYPES = [
   { n:'外出',        c:'#d97706' },
   { n:'ウェブ打合せ', c:'#0e7490' },
@@ -1035,6 +1035,9 @@ function closeSettings(){
     var v=inp.value.trim(); if(v) names.push({ id: inp.getAttribute('data-rid'), name:v, color: inp.getAttribute('data-color') || RES_COLORS[0] }); });
   state.resources = names.length ? names : state.resources;
   persistAll(); renderAll();
+  if(state.sync.mode==='firebase' && fb.ref && fbResRef){
+    fbResRef.set(state.resources);
+  }
   document.getElementById('setOverlay').classList.remove('show');
   return names.length;
 }
@@ -1088,7 +1091,9 @@ function setSync(kind, msg){
   document.getElementById('syncStat').textContent = msg ? ('状態: '+msg) : '';
   document.getElementById('syncChip').title = 'データ同期の設定を開く' + (msg ? '（'+msg+'）' : '');
 }
+var fbResRef=null;
 function teardownRemote(){
+  if(fbResRef){ try{ fbResRef.off(); }catch(e){} fbResRef=null; }
   if(fb.ref){ try{ fb.ref.off(); }catch(e){} fb.ref=null; }
   try{ if(window.firebase && firebase.apps && firebase.apps.length) firebase.app().delete(); }catch(e){}
   if(sheetsTimer){ clearInterval(sheetsTimer); sheetsTimer=null; }
@@ -1142,6 +1147,19 @@ function connectFirebase(cfg){
     .then(function(){
       firebase.initializeApp(cfg);
       fb.ref = firebase.database().ref('reservations');
+      /* 行（予約対象）もクラウド共有：誰かが保存すると全端末に反映 */
+      fbResRef = firebase.database().ref('meta/resources');
+      fbResRef.on('value', function(snap){
+        var v = snap.val();
+        if (Array.isArray(v) && v.length){
+          state.resources = v.map(function(r){
+            return { id:String(r.id), name:String(r.name), color:String(r.color||'#1a46d8') }; });
+          store.setItem(LS.reso, JSON.stringify(state.resources));
+          renderAll();
+        } else if (state.resources.length){
+          fbResRef.set(state.resources);
+        }
+      });
       /* バージョン同期：新しいファイルが繋がるとクラウドの番号が上がり、古い端末に警告を出す */
       var verRef = firebase.database().ref('meta/appVersion');
       verRef.on('value', function(snap){
