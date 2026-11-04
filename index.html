@@ -507,7 +507,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 5;
+var APP_VERSION = 6;
 var TYPES = [
   { n:'外出',        c:'#d97706' },
   { n:'ウェブ打合せ', c:'#0e7490' },
@@ -1770,6 +1770,19 @@ function bindStaticEvents(){
 
   setInterval(function(){ if(isToday(state.date)) renderBoard(); }, 60000);
   window.addEventListener('resize', fitBoard);
+  /* 開きっぱなしのタブが古いバージョンのままになっていないか自動チェック */
+  function selfVersionCheck(){
+    if(state.sync.mode==='firebase') return; /* Firebase版はバージョン同期で検出済み */
+    fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'})
+      .then(function(r){ return r.text(); })
+      .then(function(t){
+        var m = t.match(/APP_VERSION = (\d+)/);
+        var w = document.getElementById('verWarn');
+        if(m && w && (Number(m[1]) > APP_VERSION)) w.hidden = false;
+      }).catch(function(){});
+  }
+  setInterval(selfVersionCheck, 180000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) selfVersionCheck(); });
   document.addEventListener('visibilitychange', function(){
     if(!document.hidden){
       if(state.sync.mode==='sheets') sheetsPoll();
