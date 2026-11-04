@@ -81,6 +81,12 @@ input,select{font:inherit;color:inherit}
 .memwarn{max-width:1280px;margin:8px auto 0;padding:0 12px}
 .memwarn div{background:#fffbe8;border:1px solid #eadfae;color:#7a6a2e;font-size:12.5px;font-weight:600;
   border-radius:8px;padding:8px 12px}
+.dtable{width:100%;border-collapse:collapse;font-size:14px}
+.dtable th{width:72px;text-align:left;font-size:12px;color:var(--sub);padding:8px 10px 8px 0;vertical-align:top;border-bottom:1px solid var(--line2)}
+.dtable td{padding:8px 0;border-bottom:1px solid var(--line2);font-weight:700}
+.dtable tr:last-child td,.dtable tr:last-child th{border-bottom:none}
+.dchip{display:inline-flex;align-items:center;gap:6px;font-weight:800}
+.dchip i{width:11px;height:11px;border-radius:3px;display:inline-block}
 .gitem{margin-bottom:11px}
 .gitem b{display:block;font-size:13.5px;color:var(--ink);margin-bottom:2px}
 .gitem span{font-size:12.5px;color:var(--sub);line-height:1.65;display:block}
@@ -132,6 +138,12 @@ input,select{font:inherit;color:inherit}
 .blk:hover{box-shadow:0 3px 8px rgba(31,35,46,.22);z-index:3}
 .blk b{display:block;font-size:14.5px;font-weight:800;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#141826}
 .blk span{display:block;font-size:13px;font-weight:700;color:#191d2c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.multisel{border:1px solid var(--line);border-radius:6px;max-height:150px;overflow:auto;background:#fff}
+.f .multisel label{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line2);margin:0}
+.f .multisel label:last-child{border-bottom:none}
+.f .multisel label:hover{background:var(--lav)}
+.f .multisel input{width:15px;height:15px;min-width:15px;accent-color:var(--blue);flex:none;border:none;padding:0;background:transparent}
+.f .multisel i{width:9px;height:9px;border-radius:2px;flex:none}
 .typesel{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .tchip{display:flex;align-items:center;justify-content:center;gap:5px;border:1.5px solid var(--line);
   border-radius:6px;padding:6px 4px;font-size:11.5px;font-weight:700;background:#fff;line-height:1.2;text-align:center}
@@ -279,7 +291,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
   <button class="btn primary" id="newBtn">＋ 新規予約</button>
 </nav>
 
-<div class="memwarn" id="verWarn" hidden><div>⬆ 新しいバージョンの予約表が配布されています。お手数ですが、配布された<b>最新の reservation-manager.html</b> を開き直してください（この画面は古いバージョンです）。予約データはクラウドから自動で引き継がれます。</div></div>
+<div class="memwarn" id="verWarn" hidden><div>⬆ 新しいバージョンの予約表が配布されています。この画面は古いバージョンです。ページを<b>再読込</b>（PC: Ctrl+F5 / スマホ: 再読込ボタン）するか、配布された<b>最新のURL</b>を開き直してください。予約データはクラウドから自動で引き継がれます。</div></div>
 
 <div class="memwarn" id="memWarn" hidden><div>⚠ このプレビュー画面ではデータ保存が制限されています。名前や設定を保存するには、HTMLファイルをダウンロードしてブラウザで直接開いてください。</div></div>
 
@@ -334,7 +346,14 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
     </div>
     <div class="mbody">
       <div class="err" id="formErr" hidden></div>
-      <label class="f"><span>予約対象</span><select id="fResource"></select></label>
+      <div class="f"><span id="fMultiLabel">予約対象（複数選択で一斉登録）</span>
+        <div class="multisel" id="fMulti"></div>
+        <div class="srow" style="margin:6px 0 0">
+          <button class="btn sm ghost" id="fAll" type="button">全員選択</button>
+          <button class="btn sm ghost" id="fNone" type="button">選択解除</button>
+          <span class="statline" id="fMultiN"></span>
+        </div>
+      </div>
       <label class="f"><span>利用日</span><input type="date" id="fDate"></label>
       <div class="times">
         <label class="f"><span>開始時間</span><select id="fStart"></select></label>
@@ -349,6 +368,30 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
       <span class="spacer"></span>
       <button class="btn" id="fCancel">閉じる</button>
       <button class="btn primary" id="fSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 予約詳細・削除 ===== -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal">
+    <div class="mhead"><h3>予約の詳細</h3>
+      <button class="iconbtn" id="dClose" aria-label="閉じる"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="mbody">
+      <table class="dtable"><tbody>
+        <tr><th>対象</th><td id="dRes"></td></tr>
+        <tr><th>日付</th><td id="dDate"></td></tr>
+        <tr><th>時間</th><td id="dTime"></td></tr>
+        <tr><th>種類</th><td><span class="dchip" id="dType"><i></i><span></span></span></td></tr>
+        <tr><th>詳細</th><td id="dPurpose"></td></tr>
+      </tbody></table>
+    </div>
+    <div class="mfoot">
+      <button class="btn danger" id="dDelete">🗑 この予約を削除</button>
+      <span class="spacer"></span>
+      <button class="btn" id="dCancel">閉じる</button>
+      <button class="btn primary" id="dEdit">✎ 変更する</button>
     </div>
   </div>
 </div>
@@ -507,7 +550,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 7;
+var APP_VERSION = 11;
 var TYPES = [
   { n:'外出',        c:'#d97706' },
   { n:'ウェブ打合せ', c:'#0e7490' },
@@ -902,7 +945,7 @@ function bindBoard(){
     var blk = e.target.closest('.blk');
     if(blk){
       if(blk.getAttribute('data-cal')){ toast('カレンダーから取り込んだ予定です（アプリ内では編集できません）'); return; }
-      openForm({ mode:'edit', id:blk.getAttribute('data-id') }); return;
+      openDetail(blk.getAttribute('data-id')); return;
     }
     var track = e.target.closest('.track');
     if(!track || !track.getAttribute('data-rid')) return;
@@ -927,9 +970,8 @@ function openForm(opt){
   document.getElementById('formErr').hidden = true;
   document.getElementById('formTitle').textContent = editing ? '予約の変更' : '新規予約';
 
-  var selR = document.getElementById('fResource');
-  selR.innerHTML = state.resources.map(function(r){
-    return '<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>'; }).join('');
+  document.getElementById('fMultiLabel').textContent = editing ? '予約対象（変更する場合は選び直し）' : '予約対象（複数選択で一斉登録）';
+  buildMultiList(editing ? [editing.resourceId] : (opt.resourceId ? [opt.resourceId] : [state.resources[0] && state.resources[0].id]), !!editing);
   var startMin, endMin, dateV, rid;
   if(editing){
     rid = editing.resourceId; dateV = editing.date;
@@ -942,14 +984,31 @@ function openForm(opt){
     endMin = (opt.endMin!=null) ? opt.endMin : 660;
     document.getElementById('fPurpose').value = '';
   }
-  if(resById(rid)) selR.value = rid;
   document.getElementById('fDate').value = dateV;
   document.getElementById('fStart').innerHTML = timeOpts(OPEN_MIN, CLOSE_MIN-SLOT_MIN, startMin);
   document.getElementById('fEnd').innerHTML = timeOpts(OPEN_MIN+SLOT_MIN, CLOSE_MIN, endMin);
   buildTypeChips();
 
   document.getElementById('formOverlay').classList.add('show');
-  document.getElementById('fPurpose').focus();
+  if(!editing) document.getElementById('fPurpose').focus();
+}
+function buildMultiList(preIds, single){
+  var box=document.getElementById('fMulti'); box.innerHTML='';
+  state.resources.forEach(function(r){
+    var lab=document.createElement('label');
+    var cb=document.createElement('input'); cb.type='checkbox'; cb.value=r.id;
+    if(preIds && preIds.indexOf(r.id)>=0) cb.checked=true;
+    cb.addEventListener('change', function(){
+      if(single && cb.checked){
+        Array.prototype.forEach.call(box.querySelectorAll('input'), function(x){ if(x!==cb) x.checked=false; });
+      }
+      updateMultiN(); });
+    var i=document.createElement('i'); i.style.background=r.color||'#1a46d8';
+    lab.appendChild(cb); lab.appendChild(i);
+    lab.appendChild(document.createTextNode(r.name));
+    box.appendChild(lab);
+  });
+  updateMultiN();
 }
 function buildTypeChips(){
   var box=document.getElementById('fType'); box.innerHTML='';
@@ -965,6 +1024,22 @@ function closeForm(){ document.getElementById('formOverlay').classList.remove('s
 
 function openGuide(){ document.getElementById('guideOverlay').classList.add('show'); }
 
+var detailId = null;
+function openDetail(id){
+  var x = byId(id);
+  if(!x){ toast('予約が見つかりません（すでに削除された可能性）', true); renderAll(); return; }
+  detailId = id;
+  document.getElementById('dRes').textContent = x.resourceName || resName(x.resourceId) || '-';
+  document.getElementById('dDate').textContent = jpDateFull(x.date);
+  document.getElementById('dTime').textContent = x.start + '〜' + x.end;
+  var chip = document.getElementById('dType');
+  chip.querySelector('i').style.background = typeColor(x.type);
+  chip.querySelector('span').textContent = x.type || 'その他';
+  document.getElementById('dPurpose').textContent = x.purpose || '（記入なし）';
+  document.getElementById('detailOverlay').classList.add('show');
+}
+function closeDetail(){ document.getElementById('detailOverlay').classList.remove('show'); detailId = null; }
+
 function showFormErr(msg){
   var e = document.getElementById('formErr');
   e.textContent = msg; e.hidden = false;
@@ -973,40 +1048,83 @@ document.getElementById('fStart').addEventListener('change', function(){
   var st=toMin(this.value), en=toMin(document.getElementById('fEnd').value);
   if(en<=st) document.getElementById('fEnd').value = hm(Math.min(CLOSE_MIN, st+SLOT_MIN));
 });
+function getMultiSel(){ 
+  var out=[];
+  Array.prototype.forEach.call(document.querySelectorAll('#fMulti input:checked'), function(cb){
+    out.push(cb.value); });
+  return out;
+}
 document.getElementById('fSave').addEventListener('click', function(){
-  var r = {
-    id: editing ? editing.id : uid(),
-    date: document.getElementById('fDate').value,
-    resourceId: document.getElementById('fResource').value,
-    resourceName: resName(document.getElementById('fResource').value),
-    start: document.getElementById('fStart').value,
-    end: document.getElementById('fEnd').value,
-    user: '',
-    type: pickedType,
-    purpose: document.getElementById('fPurpose').value.trim(),
-    createdAt: editing ? editing.createdAt : Date.now(),
-    updatedAt: Date.now()
-  };
-  if(!r.date){ showFormErr('利用日を選択してください。'); return; }
-  if(toMin(r.end) <= toMin(r.start)){ showFormErr('終了時間は開始時間より後にしてください。'); return; }
-  var c = findConflict(r, editing ? editing.id : null);
-  if(c){
-    showFormErr('この時間帯はすでに予約が入っています（'+c.start+'〜'+c.end+' / '+(c.type||'その他')+' / '+(c.purpose||'')+'）');
+  var sel = getMultiSel();
+  if(!sel.length){ showFormErr('予約対象を1つ以上選んでください。'); return; }
+  var date = document.getElementById('fDate').value;
+  var start = document.getElementById('fStart').value;
+  var end = document.getElementById('fEnd').value;
+  if(!date){ showFormErr('利用日を選択してください。'); return; }
+  if(toMin(end) <= toMin(start)){ showFormErr('終了時間は開始時間より後にしてください。'); return; }
+  if(editing){
+    var r = {
+      id: editing.id, date:date, resourceId:sel[0], resourceName:resName(sel[0]),
+      start:start, end:end, user:'', type:pickedType,
+      purpose: document.getElementById('fPurpose').value.trim(),
+      createdAt: editing.createdAt, updatedAt: Date.now()
+    };
+    var c = findConflict(r, editing.id);
+    if(c){ showFormErr('この時間帯はすでに予約が入っています（'+c.start+'〜'+c.end+' / '+(c.type||'その他')+' / '+(c.purpose||'')+'）'); return; }
+    closeForm(); toast('予約を更新しました'); syncUpdate(r);
     return;
   }
-  var isNew = !editing;
+  /* 新規：重複を全件チェックしてから、まとめて一括登録（部分登録なし） */
+  var recs=[], dup=[];
+  sel.forEach(function(rid){
+    var r = { id:uid(), date:date, resourceId:rid, resourceName:resName(rid),
+      start:start, end:end, user:'', type:pickedType,
+      purpose: document.getElementById('fPurpose').value.trim(),
+      createdAt:Date.now(), updatedAt:Date.now() };
+    var c = findConflict(r, null);
+    if(c){ dup.push(resName(rid)+'（'+c.start+'〜'+c.end+'）'); return; }
+    recs.push(r);
+  });
   closeForm();
-  if(isNew){ toast('予約を登録しました'); syncAdd(r); }
-  else { toast('予約を更新しました'); syncUpdate(r); }
+  recs.forEach(function(r){ syncAdd(r); });
+  if(dup.length){ toast(recs.length+'件を登録・重複のため未登録: '+dup.join('、'), true); }
+  else { toast(recs.length>=2 ? (recs.length+'件の対象に一括登録しました') : '予約を登録しました'); }
 });
+document.getElementById('fAll').addEventListener('click', function(){
+  Array.prototype.forEach.call(document.querySelectorAll('#fMulti input'), function(cb){ cb.checked=true; });
+  updateMultiN();
+});
+document.getElementById('fNone').addEventListener('click', function(){
+  Array.prototype.forEach.call(document.querySelectorAll('#fMulti input'), function(cb){ cb.checked=false; });
+  updateMultiN();
+});
+function updateMultiN(){
+  var n=getMultiSel().length;
+  document.getElementById('fMultiN').textContent = n ? (n+'行選択中') : '';
+}
 document.getElementById('fDelete').addEventListener('click', function(){
   if(!editing) return;
-  if(!confirm('この予約をキャンセル（削除）しますか？\n'+editing.start+'〜'+editing.end+' '+(editing.type||'その他')+'「'+(editing.purpose||'')+'」')) return;
-  var id = editing.id;
+  var x = editing;
   closeForm();
-  toast('予約をキャンセルしました');
-  syncRemove(id);
+  openDetail(x.id);
 });
+  document.getElementById('dClose').addEventListener('click', closeDetail);
+  document.getElementById('dCancel').addEventListener('click', closeDetail);
+  document.getElementById('detailOverlay').addEventListener('click', function(e){
+    if(e.target===this) closeDetail(); });
+  document.getElementById('dDelete').addEventListener('click', function(){
+    var x = byId(detailId);
+    if(!x) return;
+    var info = (x.type||'その他')+' '+x.start+'〜'+x.end;
+    closeDetail();
+    syncRemove(x.id);
+    toast('予約を削除しました（'+info+'）');
+  });
+  document.getElementById('dEdit').addEventListener('click', function(){
+    var id = detailId;
+    closeDetail();
+    if(id) openForm({ mode:'edit', id:id });
+  });
 document.getElementById('formClose').addEventListener('click', closeForm);
 document.getElementById('fCancel').addEventListener('click', closeForm);
 document.getElementById('formOverlay').addEventListener('click', function(e){
@@ -1740,6 +1858,7 @@ function bindStaticEvents(){
     if(e.key==='Escape'){
       document.getElementById('formOverlay').classList.remove('show');
       document.getElementById('guideOverlay').classList.remove('show');
+      document.getElementById('detailOverlay').classList.remove('show');
       if(document.getElementById('setOverlay').classList.contains('show')) closeSettings();
     }
   });
@@ -1753,6 +1872,8 @@ function bindStaticEvents(){
   /* ---- URLバージョン管理：古いURLは最新版へ自動転送（キャッシュ問題の根絶） ---- */
   (function(){
     try{
+      if(location.protocol.indexOf('http')!==0) return; /* file:// で開いた場合は転送しない */
+      if(location.hostname!=='keiaizawa1212-cmd.github.io') return; /* Pages以外では転送しない */
       var m=location.pathname.match(/\/v(\d+)\/?$/);
       var urlVer=m?Number(m[1]):0;
       if(urlVer && urlVer!==APP_VERSION){
@@ -1822,6 +1943,7 @@ function bindStaticEvents(){
   if(bo.shot==='item') switchView('item');
   if(bo.shot==='month') switchView('month');
   if(bo.shot==='guide') openGuide();
+  if(bo.shot==='detail' && state.reservations.length) openDetail(state.reservations[0].id);
 })();
 </script>
 </body>
