@@ -1809,6 +1809,7 @@ function bindStaticEvents(){
   /* ---- URLバージョン管理：古いURLは最新版へ自動転送（キャッシュ問題の根絶） ---- */
   (function(){
     try{
+      if(location.protocol.indexOf('http')!==0) return; /* file:// で開いた場合は転送しない */
       var m=location.pathname.match(/\/v(\d+)\/?$/);
       var urlVer=m?Number(m[1]):0;
       if(urlVer && urlVer!==APP_VERSION){
