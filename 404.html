@@ -285,7 +285,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
   <button class="btn primary" id="newBtn">＋ 新規予約</button>
 </nav>
 
-<div class="memwarn" id="verWarn" hidden><div>⬆ 新しいバージョンの予約表が配布されています。お手数ですが、配布された<b>最新の reservation-manager.html</b> を開き直してください（この画面は古いバージョンです）。予約データはクラウドから自動で引き継がれます。</div></div>
+<div class="memwarn" id="verWarn" hidden><div>⬆ 新しいバージョンの予約表が配布されています。この画面は古いバージョンです。ページを<b>再読込</b>（PC: Ctrl+F5 / スマホ: 再読込ボタン）するか、配布された<b>最新のURL</b>を開き直してください。予約データはクラウドから自動で引き継がれます。</div></div>
 
 <div class="memwarn" id="memWarn" hidden><div>⚠ このプレビュー画面ではデータ保存が制限されています。名前や設定を保存するには、HTMLファイルをダウンロードしてブラウザで直接開いてください。</div></div>
 
@@ -520,7 +520,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 8;
+var APP_VERSION = 9;
 var TYPES = [
   { n:'外出',        c:'#d97706' },
   { n:'ウェブ打合せ', c:'#0e7490' },
