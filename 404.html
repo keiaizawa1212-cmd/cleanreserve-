@@ -133,11 +133,11 @@ input,select{font:inherit;color:inherit}
 .blk b{display:block;font-size:14.5px;font-weight:800;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#141826}
 .blk span{display:block;font-size:13px;font-weight:700;color:#191d2c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .multisel{border:1px solid var(--line);border-radius:6px;max-height:150px;overflow:auto;background:#fff}
-.multisel label{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:13.5px;cursor:pointer;border-bottom:1px solid var(--line2)}
-.multisel label:last-child{border-bottom:none}
-.multisel label:hover{background:var(--lav)}
-.multisel input{width:15px;height:15px;accent-color:var(--blue);flex:none}
-.multisel i{width:9px;height:9px;border-radius:2px;flex:none}
+.f .multisel label{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line2);margin:0}
+.f .multisel label:last-child{border-bottom:none}
+.f .multisel label:hover{background:var(--lav)}
+.f .multisel input{width:15px;height:15px;min-width:15px;accent-color:var(--blue);flex:none;border:none;padding:0;background:transparent}
+.f .multisel i{width:9px;height:9px;border-radius:2px;flex:none}
 .typesel{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .tchip{display:flex;align-items:center;justify-content:center;gap:5px;border:1.5px solid var(--line);
   border-radius:6px;padding:6px 4px;font-size:11.5px;font-weight:700;background:#fff;line-height:1.2;text-align:center}
@@ -340,7 +340,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
     </div>
     <div class="mbody">
       <div class="err" id="formErr" hidden></div>
-      <div class="f"><span>予約対象（複数選択で一斉登録）</span>
+      <div class="f"><span id="fMultiLabel">予約対象（複数選択で一斉登録）</span>
         <div class="multisel" id="fMulti"></div>
         <div class="srow" style="margin:6px 0 0">
           <button class="btn sm ghost" id="fAll" type="button">全員選択</button>
@@ -520,7 +520,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 9;
+var APP_VERSION = 10;
 var TYPES = [
   { n:'外出',        c:'#d97706' },
   { n:'ウェブ打合せ', c:'#0e7490' },
@@ -940,7 +940,8 @@ function openForm(opt){
   document.getElementById('formErr').hidden = true;
   document.getElementById('formTitle').textContent = editing ? '予約の変更' : '新規予約';
 
-  buildMultiList(editing ? [editing.resourceId] : (opt.resourceId ? [opt.resourceId] : [state.resources[0] && state.resources[0].id]));
+  document.getElementById('fMultiLabel').textContent = editing ? '予約対象（変更する場合は選び直し）' : '予約対象（複数選択で一斉登録）';
+  buildMultiList(editing ? [editing.resourceId] : (opt.resourceId ? [opt.resourceId] : [state.resources[0] && state.resources[0].id]), !!editing);
   var startMin, endMin, dateV, rid;
   if(editing){
     rid = editing.resourceId; dateV = editing.date;
@@ -961,13 +962,17 @@ function openForm(opt){
   document.getElementById('formOverlay').classList.add('show');
   if(!editing) document.getElementById('fPurpose').focus();
 }
-function buildMultiList(preIds){
+function buildMultiList(preIds, single){
   var box=document.getElementById('fMulti'); box.innerHTML='';
   state.resources.forEach(function(r){
     var lab=document.createElement('label');
     var cb=document.createElement('input'); cb.type='checkbox'; cb.value=r.id;
     if(preIds && preIds.indexOf(r.id)>=0) cb.checked=true;
-    cb.addEventListener('change', updateMultiN);
+    cb.addEventListener('change', function(){
+      if(single && cb.checked){
+        Array.prototype.forEach.call(box.querySelectorAll('input'), function(x){ if(x!==cb) x.checked=false; });
+      }
+      updateMultiN(); });
     var i=document.createElement('i'); i.style.background=r.color||'#1a46d8';
     lab.appendChild(cb); lab.appendChild(i);
     lab.appendChild(document.createTextNode(r.name));
@@ -1023,24 +1028,21 @@ document.getElementById('fSave').addEventListener('click', function(){
     closeForm(); toast('予約を更新しました'); syncUpdate(r);
     return;
   }
-  /* 新規：選択した全対象へ一括登録（同一対象内の重複のみチェック） */
-  var conflicts=[];
+  /* 新規：重複を全件チェックしてから、まとめて一括登録（部分登録なし） */
+  var recs=[], dup=[];
   sel.forEach(function(rid){
     var r = { id:uid(), date:date, resourceId:rid, resourceName:resName(rid),
       start:start, end:end, user:'', type:pickedType,
       purpose: document.getElementById('fPurpose').value.trim(),
       createdAt:Date.now(), updatedAt:Date.now() };
     var c = findConflict(r, null);
-    if(c){ conflicts.push(resName(rid)+'（'+c.start+'〜'+c.end+'）'); return; }
-    syncAdd(r);
+    if(c){ dup.push(resName(rid)+'（'+c.start+'〜'+c.end+'）'); return; }
+    recs.push(r);
   });
-  if(conflicts.length){
-    showFormErr('時間が重なっているため登録できなかった対象: '+conflicts.join('、'));
-    return;
-  }
-  var n = sel.length;
   closeForm();
-  toast(n>=2 ? (n+'件の対象に一括登録しました') : '予約を登録しました');
+  recs.forEach(function(r){ syncAdd(r); });
+  if(dup.length){ toast(recs.length+'件を登録・重複のため未登録: '+dup.join('、'), true); }
+  else { toast(recs.length>=2 ? (recs.length+'件の対象に一括登録しました') : '予約を登録しました'); }
 });
 document.getElementById('fAll').addEventListener('click', function(){
   Array.prototype.forEach.call(document.querySelectorAll('#fMulti input'), function(cb){ cb.checked=true; });
