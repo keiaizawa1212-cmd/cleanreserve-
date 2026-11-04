@@ -546,14 +546,14 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
 ================================================================ */
 
 /* ---------- 定数 ---------- */
-var SLOT_MIN = 30, OPEN_MIN = 9*60, CLOSE_MIN = 21*60;
+var SLOT_MIN = 30, OPEN_MIN = 7*60, CLOSE_MIN = 21*60;
 var SLOTS = (CLOSE_MIN - OPEN_MIN) / SLOT_MIN;
 var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1' };
 var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 13;
+var APP_VERSION = 14;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -769,7 +769,7 @@ function renderBoard(){
     }
     var nl = (now!==null && now>OPEN_MIN && now<CLOSE_MIN && !isCal)
       ? '<div class="nowline" style="left:'+((now-OPEN_MIN)/(CLOSE_MIN-OPEN_MIN)*100)+'%"></div>' : '';
-    h += '<div class="row"><div class="rlabel"><i style="background:'+r.color+'"></i>'
+    h += '<div class="row"><div class="rlabel">'
       +  '<div><span>'+esc(r.name)+'</span><em>'+day.length+'件</em></div></div>'
       +  '<div class="track"'+(isCal?'':' data-rid="'+esc(r.id)+'"')+'>'+blks+nl+'</div></div>';
   }
