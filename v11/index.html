@@ -81,6 +81,12 @@ input,select{font:inherit;color:inherit}
 .memwarn{max-width:1280px;margin:8px auto 0;padding:0 12px}
 .memwarn div{background:#fffbe8;border:1px solid #eadfae;color:#7a6a2e;font-size:12.5px;font-weight:600;
   border-radius:8px;padding:8px 12px}
+.dtable{width:100%;border-collapse:collapse;font-size:14px}
+.dtable th{width:72px;text-align:left;font-size:12px;color:var(--sub);padding:8px 10px 8px 0;vertical-align:top;border-bottom:1px solid var(--line2)}
+.dtable td{padding:8px 0;border-bottom:1px solid var(--line2);font-weight:700}
+.dtable tr:last-child td,.dtable tr:last-child th{border-bottom:none}
+.dchip{display:inline-flex;align-items:center;gap:6px;font-weight:800}
+.dchip i{width:11px;height:11px;border-radius:3px;display:inline-block}
 .gitem{margin-bottom:11px}
 .gitem b{display:block;font-size:13.5px;color:var(--ink);margin-bottom:2px}
 .gitem span{font-size:12.5px;color:var(--sub);line-height:1.65;display:block}
@@ -366,6 +372,30 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
   </div>
 </div>
 
+<!-- ===== 予約詳細・削除 ===== -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal">
+    <div class="mhead"><h3>予約の詳細</h3>
+      <button class="iconbtn" id="dClose" aria-label="閉じる"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="mbody">
+      <table class="dtable"><tbody>
+        <tr><th>対象</th><td id="dRes"></td></tr>
+        <tr><th>日付</th><td id="dDate"></td></tr>
+        <tr><th>時間</th><td id="dTime"></td></tr>
+        <tr><th>種類</th><td><span class="dchip" id="dType"><i></i><span></span></span></td></tr>
+        <tr><th>詳細</th><td id="dPurpose"></td></tr>
+      </tbody></table>
+    </div>
+    <div class="mfoot">
+      <button class="btn danger" id="dDelete">🗑 この予約を削除</button>
+      <span class="spacer"></span>
+      <button class="btn" id="dCancel">閉じる</button>
+      <button class="btn primary" id="dEdit">✎ 変更する</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 設定 ===== -->
 <div class="overlay top" id="setOverlay">
   <div class="modal wide">
@@ -520,7 +550,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 10;
+var APP_VERSION = 11;
 var TYPES = [
   { n:'外出',        c:'#d97706' },
   { n:'ウェブ打合せ', c:'#0e7490' },
@@ -915,7 +945,7 @@ function bindBoard(){
     var blk = e.target.closest('.blk');
     if(blk){
       if(blk.getAttribute('data-cal')){ toast('カレンダーから取り込んだ予定です（アプリ内では編集できません）'); return; }
-      openForm({ mode:'edit', id:blk.getAttribute('data-id') }); return;
+      openDetail(blk.getAttribute('data-id')); return;
     }
     var track = e.target.closest('.track');
     if(!track || !track.getAttribute('data-rid')) return;
@@ -994,6 +1024,22 @@ function closeForm(){ document.getElementById('formOverlay').classList.remove('s
 
 function openGuide(){ document.getElementById('guideOverlay').classList.add('show'); }
 
+var detailId = null;
+function openDetail(id){
+  var x = byId(id);
+  if(!x){ toast('予約が見つかりません（すでに削除された可能性）', true); renderAll(); return; }
+  detailId = id;
+  document.getElementById('dRes').textContent = x.resourceName || resName(x.resourceId) || '-';
+  document.getElementById('dDate').textContent = jpDateFull(x.date);
+  document.getElementById('dTime').textContent = x.start + '〜' + x.end;
+  var chip = document.getElementById('dType');
+  chip.querySelector('i').style.background = typeColor(x.type);
+  chip.querySelector('span').textContent = x.type || 'その他';
+  document.getElementById('dPurpose').textContent = x.purpose || '（記入なし）';
+  document.getElementById('detailOverlay').classList.add('show');
+}
+function closeDetail(){ document.getElementById('detailOverlay').classList.remove('show'); detailId = null; }
+
 function showFormErr(msg){
   var e = document.getElementById('formErr');
   e.textContent = msg; e.hidden = false;
@@ -1058,12 +1104,27 @@ function updateMultiN(){
 }
 document.getElementById('fDelete').addEventListener('click', function(){
   if(!editing) return;
-  if(!confirm('この予約をキャンセル（削除）しますか？\n'+editing.start+'〜'+editing.end+' '+(editing.type||'その他')+'「'+(editing.purpose||'')+'」')) return;
-  var id = editing.id;
+  var x = editing;
   closeForm();
-  toast('予約をキャンセルしました');
-  syncRemove(id);
+  openDetail(x.id);
 });
+  document.getElementById('dClose').addEventListener('click', closeDetail);
+  document.getElementById('dCancel').addEventListener('click', closeDetail);
+  document.getElementById('detailOverlay').addEventListener('click', function(e){
+    if(e.target===this) closeDetail(); });
+  document.getElementById('dDelete').addEventListener('click', function(){
+    var x = byId(detailId);
+    if(!x) return;
+    var info = (x.type||'その他')+' '+x.start+'〜'+x.end;
+    closeDetail();
+    syncRemove(x.id);
+    toast('予約を削除しました（'+info+'）');
+  });
+  document.getElementById('dEdit').addEventListener('click', function(){
+    var id = detailId;
+    closeDetail();
+    if(id) openForm({ mode:'edit', id:id });
+  });
 document.getElementById('formClose').addEventListener('click', closeForm);
 document.getElementById('fCancel').addEventListener('click', closeForm);
 document.getElementById('formOverlay').addEventListener('click', function(e){
@@ -1797,6 +1858,7 @@ function bindStaticEvents(){
     if(e.key==='Escape'){
       document.getElementById('formOverlay').classList.remove('show');
       document.getElementById('guideOverlay').classList.remove('show');
+      document.getElementById('detailOverlay').classList.remove('show');
       if(document.getElementById('setOverlay').classList.contains('show')) closeSettings();
     }
   });
@@ -1881,6 +1943,7 @@ function bindStaticEvents(){
   if(bo.shot==='item') switchView('item');
   if(bo.shot==='month') switchView('month');
   if(bo.shot==='guide') openGuide();
+  if(bo.shot==='detail' && state.reservations.length) openDetail(state.reservations[0].id);
 })();
 </script>
 </body>
