@@ -507,7 +507,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 1;
+var APP_VERSION = 2;
 var TYPES = [
   { n:'外出',        c:'#d97706' },
   { n:'ウェブ打合せ', c:'#0e7490' },
@@ -526,7 +526,7 @@ function typeColor(n){ for(var i=0;i<TYPES.length;i++) if(TYPES[i].n===n) return
    何も設定しなくても自動で接続されます。
    例: var CR_FB_PRESET = {"apiKey":"AIza...","authDomain":"xxx.firebaseapp.com","databaseURL":"https://xxx-default-rtdb.firebaseio.com","projectId":"xxx"};
    社員配布は「この1行にconfigを貼ったHTML」を送るだけです。 */
-var CR_FB_PRESET = null;
+var CR_FB_PRESET = {"apiKey":"AIzaSyA1Hz7AmLAdqKO7uZdpB1JAVnenyaHHF3Y","authDomain":"cleanreserve-cd29a.firebaseapp.com","databaseURL":"https://cleanreserve-cd29a-default-rtdb.firebaseio.com","projectId":"cleanreserve-cd29a","storageBucket":"cleanreserve-cd29a.firebasestorage.app","messagingSenderId":"387779264264","appId":"1:387779264264:web:846623d8527ededde776bd"};
 
 /* ---------- 安全なストレージ ---------- */
 var storeIsMemory = false;
