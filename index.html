@@ -156,6 +156,8 @@ input,select{font:inherit;color:inherit}
 .nowline{position:absolute;top:0;bottom:0;width:2px;background:#d0342c;pointer-events:none;z-index:4;opacity:.8}
 .nowline::before{content:"";position:absolute;top:-4px;left:-3px;width:8px;height:8px;border-radius:50%;background:#d0342c}
 .hint{text-align:center;color:var(--sub);font-size:12px}
+.hint .ver{display:inline-block;margin-left:8px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:1px 10px;font-weight:700;cursor:pointer}
+.hint .ver:hover{color:var(--ink)}
 
 /* ===== アイテム別 ===== */
 .icards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px}
@@ -323,7 +325,8 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
       </div>
       <div class="dayempty" id="dayEmpty" hidden>この日の予約はまだありません。タイムテーブルの空きマスをクリックして予約できます。</div>
       <div class="boardcard"><div class="board" id="board"></div></div>
-      <p class="hint">空きマスをクリック（PCはドラッグで範囲選択）で予約登録 · 予約ブロックをクリックで詳細・変更・キャンセル</p>
+      <p class="hint">空きマスをクリック（PCはドラッグで範囲選択）で予約登録 · 予約ブロックをクリックで詳細・変更・キャンセル
+        <span class="ver" id="verBadge" title="クリックで更新状況を確認">v<span id="verBadgeNum"></span></span></p>
     </section>
 
     <section class="view" data-view="item">
@@ -490,7 +493,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
       </div>
 
       <div class="pane" data-pane="data">
-        <div class="statline" style="margin-top:8px">アプリのバージョン: v<span id="verNum"></span></div>
+        <div class="statline" style="margin-top:8px">アプリのバージョン: v<span id="verNum"></span>（この画面が古い場合、画面下部のバージョン表示が黄色く点滅します）</div>
         <div class="seclabel" style="margin-top:8px">バックアップ</div>
         <div class="srow">
           <button class="btn sm" id="expBtn">JSONで書き出す</button>
@@ -550,7 +553,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 11;
+var APP_VERSION = 12;
 var TYPES = [
   { n:'外出',        c:'#d97706' },
   { n:'ウェブ打合せ', c:'#0e7490' },
@@ -1914,6 +1917,10 @@ function bindStaticEvents(){
   initSync();
   document.getElementById('gasCode').textContent=GAS_CODE;
   document.getElementById('verNum') && (document.getElementById('verNum').textContent=APP_VERSION);
+  var vb=document.getElementById('verBadgeNum');
+  if(vb){ vb.textContent=APP_VERSION;
+    vb.parentElement.title='この端末のバージョン: v'+APP_VERSION+'／クリックで最新版を確認';
+  }
   if(storeIsMemory) document.getElementById('memWarn') && (document.getElementById('memWarn').hidden=false);
 
   setInterval(function(){ if(isToday(state.date)) renderBoard(); }, 60000);
@@ -1930,6 +1937,17 @@ function bindStaticEvents(){
       }).catch(function(){});
   }
   setInterval(selfVersionCheck, 180000);
+  var vb=document.getElementById('verBadge');
+  if(vb) vb.addEventListener('click', function(){
+    if(state.sync.mode!=='firebase'){ toast('この端末はローカルモードです。設定→データ同期で接続してください', true); return; }
+    toast('最新バージョンを確認しています…');
+    selfVersionCheck();
+    setTimeout(function(){
+      var w=document.getElementById('verWarn');
+      if(w && !w.hidden){ toast('新しいバージョンがあります。ページを再読込してください', true); }
+      else { toast('この端末は最新です（v'+APP_VERSION+'）'); }
+    }, 1200);
+  });
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) selfVersionCheck(); });
   document.addEventListener('visibilitychange', function(){
     if(!document.hidden){
