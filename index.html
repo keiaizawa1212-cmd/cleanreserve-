@@ -507,7 +507,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 6;
+var APP_VERSION = 7;
 var TYPES = [
   { n:'外出',        c:'#d97706' },
   { n:'ウェブ打合せ', c:'#0e7490' },
@@ -1750,6 +1750,33 @@ function bindStaticEvents(){
 
 /* ---------- 起動 ---------- */
 (function init(){
+  /* ---- URLバージョン管理：古いURLは最新版へ自動転送（キャッシュ問題の根絶） ---- */
+  (function(){
+    try{
+      var m=location.pathname.match(/\/v(\d+)\/?$/);
+      var urlVer=m?Number(m[1]):0;
+      if(urlVer && urlVer!==APP_VERSION){
+        location.replace(location.origin+location.pathname.replace(/\/v\d+\/?$/,'/v'+APP_VERSION+'/')+location.search);
+        return;
+      }
+      if(!urlVer){
+        location.replace(location.origin+location.pathname+'v'+APP_VERSION+'/');
+        return;
+      }
+      /* 同バージョンURLでも常に最新を取りに行く */
+      var check=(function(){ try{ return fetch; }catch(e){ return null; } })();
+      if(check && location.protocol==='https:'){
+        check(location.pathname+'?t='+Date.now(),{cache:'no-store'})
+          .then(function(r){ return r.text(); })
+          .then(function(t){
+            var nm=t.match(/APP_VERSION = (\d+)/);
+            if(nm && Number(nm[1])>APP_VERSION){
+              location.replace(location.origin+location.pathname.replace(/\/v\d+\/?$/,'/v'+Number(nm[1])+'/')+location.search);
+            }
+          }).catch(function(){});
+      }
+    }catch(e){}
+  })();
   loadState();
   var bo={ demo:false, shot:null };
   try{ if(window.CR_BOOT) Object.assign(bo, window.CR_BOOT); }catch(e){}
