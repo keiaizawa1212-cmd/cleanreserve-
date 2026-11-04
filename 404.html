@@ -953,7 +953,6 @@ function openForm(opt){
     endMin = (opt.endMin!=null) ? opt.endMin : 660;
     document.getElementById('fPurpose').value = '';
   }
-  if(resById(rid)) selR.value = rid;
   document.getElementById('fDate').value = dateV;
   document.getElementById('fStart').innerHTML = timeOpts(OPEN_MIN, CLOSE_MIN-SLOT_MIN, startMin);
   document.getElementById('fEnd').innerHTML = timeOpts(OPEN_MIN+SLOT_MIN, CLOSE_MIN, endMin);
