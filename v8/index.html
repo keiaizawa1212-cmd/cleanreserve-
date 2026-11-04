@@ -1810,6 +1810,7 @@ function bindStaticEvents(){
   (function(){
     try{
       if(location.protocol.indexOf('http')!==0) return; /* file:// で開いた場合は転送しない */
+      if(location.hostname!=='keiaizawa1212-cmd.github.io') return; /* Pages以外では転送しない */
       var m=location.pathname.match(/\/v(\d+)\/?$/);
       var urlVer=m?Number(m[1]):0;
       if(urlVer && urlVer!==APP_VERSION){
