@@ -367,9 +367,9 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
       </div>
       <label class="f"><span>利用日</span><input type="date" id="fDate"></label>
       <div class="times">
-        <label class="f"><span>開始時間</span><select id="fStart"></select></label>
+        <label class="f"><span>開始時間</span><input type="time" id="fStart" step="300"></label>
         <span class="dash">〜</span>
-        <label class="f"><span>終了時間</span><select id="fEnd"></select></label>
+        <label class="f"><span>終了時間</span><input type="time" id="fEnd" step="300"></label>
       </div>
       <div class="f"><span>種類（色分け）</span><div class="typesel" id="fType"></div></div>
       <label class="f"><span>詳細・メモ（任意）</span><input id="fPurpose" placeholder="例：営業定例会議" maxlength="60"></label>
@@ -420,7 +420,8 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
     </div>
     <div class="mbody">
       <div class="pane on" data-pane="basic">
-        <div class="seclabel" style="margin-top:8px">予約対象（会議室・備品・担当者など、1行につき1件）</div>
+        <label class="f" style="margin-top:8px"><span>自分の名前（登録する予約のタイトルの先頭に自動で付きます）</span><input id="sName" placeholder="例：相澤"></label>
+        <div class="seclabel">予約対象（会議室・備品・担当者など、1行につき1件）</div>
         <div class="note" style="margin:0 0 8px">↓ 行を追加・編集したら、モーダル右下の<b style="color:#1a46d8">「設定を保存して閉じる」</b>で確定されます（×やEscでも保存されます）。</div>
         <div id="resList"></div>
         <button class="btn sm" id="resAdd">＋ 対象を追加</button>
@@ -531,7 +532,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
       <button class="iconbtn" id="guideClose" aria-label="閉じる"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="mbody">
-      <div class="gitem"><b>予約を登録する</b><span>タイムテーブルの空きマスをクリック（PCはドラッグで範囲選択）→ 内容を入力 →「保存」。「＋ 新規予約」ボタンからでも登録できます。</span></div>
+      <div class="gitem"><b>予約を登録する</b><span>タイムテーブルの空きマスをクリック（PCはドラッグで範囲選択）→ 内容を入力 →「保存」。「＋ 新規予約」ボタンからでも登録できます。設定で自分の名前を登録しておくと、タイトルの先頭に自動で付きます（時間は5分単位で自由入力可）。</span></div>
       <div class="gitem"><b>変更・キャンセルする</b><span>予約ブロック、または「アイテム別」タブの行をクリック → 編集するか「キャンセル（削除）」。</span></div>
       <div class="gitem"><b>重複チェック</b><span>同じ対象・同じ時間帯の予約は、登録時にエラー表示されます。</span></div>
       <div class="gitem"><b>色分けで登録</b><span>外出／ウェブ打合せ／来客／所内打合せ／休暇／事務所行事／出勤日／その他 の8種類から選ぶと、タイムテーブルが色で分かれます。</span></div>
@@ -556,12 +557,12 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
 /* ---------- 定数 ---------- */
 var SLOT_MIN = 30, OPEN_MIN = 7*60, CLOSE_MIN = 21*60;
 var SLOTS = (CLOSE_MIN - OPEN_MIN) / SLOT_MIN;
-var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1' };
+var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1', uname:'cr.uname.v1' };
 var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 16;
+var APP_VERSION = 17;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -603,7 +604,7 @@ var state = {
   calEvents: [],
   sync: { mode:'local', firebaseConfig:null, sheetsUrl:'', calendar:{ enabled:false, url:'', calendarId:'' } }
 };
-var editing = null, pickedType = '所内打合せ', currentView = 'list', demo = false, itemStartDate = null;
+var editing = null, pickedType = '所内打合せ', currentView = 'list', demo = false, itemStartDate = null, username = '';
 
 /* ---------- ユーティリティ ---------- */
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -677,12 +678,14 @@ function persistAll(){
   store.setItem(LS.reso, JSON.stringify(state.resources));
   store.setItem(LS.sync, JSON.stringify(state.sync));
   store.setItem(LS.demo, demo ? '1' : '0');
+  store.setItem(LS.uname, username || '');
 }
 function loadState(){
   try{ state.reservations = JSON.parse(store.getItem(LS.res)||'[]')||[]; }catch(e){ state.reservations=[]; }
   try{ state.resources = JSON.parse(store.getItem(LS.reso)||'null')||[]; }catch(e){ state.resources=[]; }
   try{ state.calEvents = JSON.parse(store.getItem(LS.cal)||'[]')||[]; }catch(e){ state.calEvents=[]; }
   try{ demo = store.getItem(LS.demo)==='1'; }catch(e){ demo=false; }
+  try{ username = store.getItem(LS.uname)||''; }catch(e){ username=''; }
   try{ var s=JSON.parse(store.getItem(LS.sync)||'null'); if(s&&s.mode) state.sync=s; }catch(e){}
   if(!state.sync.calendar) state.sync.calendar={ enabled:false, url:'', calendarId:'' };
   if(!state.sync.firebaseConfig && typeof CR_FB_PRESET!=='undefined' && CR_FB_PRESET){
@@ -1042,8 +1045,8 @@ function openForm(opt){
     document.getElementById('fPurpose').value = '';
   }
   document.getElementById('fDate').value = dateV;
-  document.getElementById('fStart').innerHTML = timeOpts(OPEN_MIN, CLOSE_MIN-SLOT_MIN, startMin);
-  document.getElementById('fEnd').innerHTML = timeOpts(OPEN_MIN+SLOT_MIN, CLOSE_MIN, endMin);
+  document.getElementById('fStart').value = hm(startMin);
+  document.getElementById('fEnd').value = hm(endMin);
   buildTypeChips();
 
   document.getElementById('formOverlay').classList.add('show');
@@ -1134,10 +1137,11 @@ document.getElementById('fSave').addEventListener('click', function(){
   }
   /* 新規：重複を全件チェックしてから、まとめて一括登録（部分登録なし） */
   var recs=[], dup=[];
+  var prefix = username ? ('〔'+username+'〕') : '';
   sel.forEach(function(rid){
     var r = { id:uid(), date:date, resourceId:rid, resourceName:resName(rid),
       start:start, end:end, user:'', type:pickedType,
-      purpose: document.getElementById('fPurpose').value.trim(),
+      purpose: prefix + document.getElementById('fPurpose').value.trim(),
       createdAt:Date.now(), updatedAt:Date.now() };
     var c = findConflict(r, null);
     if(c){ dup.push(resName(rid)+'（'+c.start+'〜'+c.end+'）'); return; }
@@ -1190,6 +1194,7 @@ document.getElementById('formOverlay').addEventListener('click', function(e){
 
 /* ---------- 設定 ---------- */
 function openSettings(tab){
+  document.getElementById('sName').value = username;
   buildResEditor();
   document.getElementById('fbConfig').value = state.sync.firebaseConfig ? JSON.stringify(state.sync.firebaseConfig, null, 2) : '';
   document.getElementById('shUrl').value = state.sync.sheetsUrl || '';
@@ -1210,6 +1215,7 @@ function closeSettings(){
   Array.prototype.forEach.call(document.querySelectorAll('#resList input'), function(inp){
     var v=inp.value.trim(); if(v) names.push({ id: inp.getAttribute('data-rid'), name:v, color: inp.getAttribute('data-color') || RES_COLORS[0] }); });
   state.resources = names.length ? names : state.resources;
+  username = document.getElementById('sName').value.trim();
   persistAll(); renderAll();
   if(state.sync.mode==='firebase' && fb.ref && fbResRef){
     fbResRef.set(state.resources);
