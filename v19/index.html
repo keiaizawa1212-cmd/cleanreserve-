@@ -528,7 +528,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
         <div class="note"><b>接続できないときのチェックリスト（GAS側）：</b>① エディタに全コードを貼り済み・保存済み（doGetあり）　② 「デプロイ」→「デプロイを管理」→ 編集 →「新バージョン」で反映済み　③ 実行ユーザー「自分」／アクセスできるユーザー「全員」。この3点で約9割解決します。</div>
         <div class="note">アップロードは同期先の予約一覧を、この端末のデータで置き換えます。同期先の予約はこの端末にも自動で取り込まれ、以後はどの端末・スマホでも同じ予約状況が表示されます。</div>
 
-        <div class="seclabel" style="margin-top:16px">Googleカレンダー連携（双方向）</div>
+        <div class="seclabel" style="margin-top:16px">Googleカレンダー連携</div>
         <div class="srow">
           <button class="btn sm" id="calToggle">カレンダー連携：無効</button>
           <span class="statline" id="calState" style="margin-top:0">オフ</span>
@@ -536,11 +536,17 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
         <div id="calBox" hidden>
           <label class="f"><span>GAS WebアプリURL（上のスプレッドシート連携と同じURLでOK）</span><input id="calUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
           <label class="f"><span>カレンダーID（空欄 = 自分のメインカレンダー。会議室の共有カレンダーに反映する場合はそのカレンダーID）</span><input id="calId" placeholder="例：meeting-room-a@group.calendar.google.com"></label>
+          <label class="f"><span>連携する行（カンマ・読点区切り・部分一致。空欄 = すべての行）</span><input id="calRows" placeholder="例：相澤"></label>
+          <label class="f"><span>カレンダーの予定の取り込み（双方向にする場合のみ）</span>
+            <select id="calPullSel">
+              <option value="off">取り込まない（アプリ → カレンダーの一方向・おすすめ）</option>
+              <option value="on">取り込む（カレンダーの予定もアプリに表示・双方向）</option>
+            </select></label>
           <div class="srow">
             <button class="btn primary sm" id="calApply">設定を適用</button>
             <button class="btn sm" id="calNow">今すぐカレンダーを取り込み</button>
           </div>
-          <div class="note"><b>双方向の動作：</b>アプリでの登録・変更・削除はGAS経由でカレンダーに自動反映されます。逆にカレンダーの予定は約30秒間隔で取り込まれ、ボード下部の「カレンダー取込」行に表示されます（カレンダー専用の会議室カレンダーを作り、そのカレンダーIDを指定するのがおすすめです）。GASコードを最新版に差し替えて再デプロイし、承認時にカレンダー権限を許可してください。</div>
+          <div class="note"><b>動作：</b>「連携する行」で指定した行の予約が、登録・変更・削除のたびにGAS経由でカレンダーへ自動反映されます。変更・削除は必ず<b>予定表から</b>行ってください（カレンダー直編集は反映されません）。取り込みを「取り込む」にするとカレンダー側の予定が約30秒間隔で「カレンダー取込」行に表示されます。個人用カレンダーへ反映する場合は「取り込まない」（一方向）がおすすめです。GASスクリプトは<b>カレンダー専用版（納品ファイル）</b>を使用してください。</div>
         </div>
       </div>
 
@@ -610,7 +616,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 20;
+var APP_VERSION = 21;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -651,7 +657,7 @@ var state = {
   reservations: [],
   resources: [],
   calEvents: [],
-  sync: { mode:'local', firebaseConfig:null, sheetsUrl:'', calendar:{ enabled:false, url:'', calendarId:'' } }
+  sync: { mode:'local', firebaseConfig:null, sheetsUrl:'', calendar:{ enabled:false, url:'', calendarId:'', rows:['相澤'], pull:false } }
 };
 var editing = null, pickedType = '所内打合せ', currentView = 'list', demo = false, itemStartDate = null, username = '';
 
@@ -736,6 +742,7 @@ function loadState(){
   try{ demo = store.getItem(LS.demo)==='1'; }catch(e){ demo=false; }
   try{ username = store.getItem(LS.uname)||''; }catch(e){ username=''; }
   try{ var s=JSON.parse(store.getItem(LS.sync)||'null'); if(s&&s.mode) state.sync=s; }catch(e){}
+  if(state.sync.calendar) state.sync.calendar = Object.assign({ enabled:false, url:'', calendarId:'', rows:['相澤'], pull:false }, state.sync.calendar);
   if(!state.sync.calendar) state.sync.calendar={ enabled:false, url:'', calendarId:'' };
   if(!state.sync.firebaseConfig && typeof CR_FB_PRESET!=='undefined' && CR_FB_PRESET){
     state.sync={ mode:'firebase', firebaseConfig:CR_FB_PRESET, sheetsUrl:state.sync.sheetsUrl, calendar:state.sync.calendar };
@@ -1327,6 +1334,8 @@ function openSettings(tab){
   document.getElementById('shUrl').value = state.sync.sheetsUrl || '';
   document.getElementById('calUrl').value = state.sync.calendar.url || state.sync.sheetsUrl || '';
   document.getElementById('calId').value = state.sync.calendar.calendarId || '';
+  document.getElementById('calRows').value = (state.sync.calendar.rows || []).join('、');
+  document.getElementById('calPullSel').value = state.sync.calendar.pull ? 'on' : 'off';
   updateCalToggle(); updateCalState();
   pickSyncMode(state.sync.mode);
   Array.prototype.forEach.call(document.querySelectorAll('.stab'), function(t){
@@ -1554,14 +1563,24 @@ function updateCalState(msg){
 }
 function calMirror(action, r){
   if(!calActive()) return;
-  var payload = { action:action, reservation:r, calendarId:state.sync.calendar.calendarId };
+  var c = state.sync.calendar;
+  var rows = (c.rows || []).map(function(x){ return String(x).trim(); }).filter(Boolean);
+  if(rows.length){
+    var nm = String(r.resourceName || '');
+    if(!nm){ var h0 = state.reservations.filter(function(x){ return x.id === r.id; })[0]; if(h0) nm = String(h0.resourceName || ''); }
+    var ok = rows.some(function(n){ return n && nm.indexOf(n) >= 0; });
+    if(!ok) return;
+  }
+  var payload = { action:action, reservation:r, calendarId:c.calendarId };
   if(state.sync.mode==='sheets') enqueue(function(){ return formPost(state.sync.calendar.url, payload); });
   else formPost(state.sync.calendar.url, payload);
 }
 function pullCalendars(manual){
   if(!calActive()) return;
+  if(!state.sync.calendar.pull && !manual) return;
   enqueue(function(){
-    return sheetsList(state.sync.calendar.url, 'calpull').then(function(d){
+    var pullUrl = state.sync.calendar.url + (state.sync.calendar.calendarId ? '?calendarId=' + encodeURIComponent(state.sync.calendar.calendarId) : '');
+  return sheetsList(pullUrl, 'calpull').then(function(d){
       if(state.sync.mode==='sheets') applyRemote(d.reservations||[]);
       applyEvents(d.events||[]);
       renderAll();
@@ -1617,6 +1636,7 @@ function syncUpdate(r){
   calMirror('calupdate', r);
 }
 function syncRemove(id){
+  var delRec = state.reservations.filter(function(x){ return x.id===id; })[0];
   if(state.sync.mode==='local'){
     state.reservations = state.reservations.filter(function(x){ return x.id!==id; });
     persistRes(); renderAll();
@@ -1630,7 +1650,7 @@ function syncRemove(id){
     persistRes(); renderAll();
     sheetsMutate({ action:'delete', id:id });
   }
-  calMirror('caldelete', { id:id });
+  calMirror('caldelete', { id:id, resourceName: delRec ? delRec.resourceName : '' });
 }
 function pushLocalToRemote(){
   var mode = state.sync.mode;
@@ -1960,6 +1980,8 @@ function bindStaticEvents(){
     if(url.indexOf('script.google.com')<0){ toast('GAS WebアプリURL（…/exec）を貼り付けてください', true); return; }
     state.sync.calendar.url = url;
     state.sync.calendar.calendarId = document.getElementById('calId').value.trim();
+    state.sync.calendar.rows = document.getElementById('calRows').value.split(/[,,、]/).map(function(x){ return x.trim(); }).filter(Boolean);
+    state.sync.calendar.pull = document.getElementById('calPullSel').value === 'on';
     state.sync.calendar.enabled = true;
     persistAll(); updateCalToggle(); updateCalState();
     pullCalendars();
@@ -2099,6 +2121,7 @@ function bindStaticEvents(){
   var bo={ demo:false, shot:null };
   try{ if(window.CR_BOOT) Object.assign(bo, window.CR_BOOT); }catch(e){}
   if(bo.uname){ username=String(bo.uname); }
+  try{ var __pf=document.createElement('iframe'); __pf.name='cr_postbox'; __pf.style.display='none'; document.body.appendChild(__pf); }catch(e){}
   try{
     var q=new URLSearchParams(location.search);
     if(q.has('demo')) bo.demo=true;
