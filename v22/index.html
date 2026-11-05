@@ -548,7 +548,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
             <button class="btn sm" id="calNow">今すぐカレンダーを取り込み</button>
             <button class="btn sm" id="calBack">既存の予約をまとめてカレンダーへ送信</button>
           </div>
-          <div class="note"><b>動作：</b>「連携する行」で指定した行の予約が、登録・変更・削除のたびにGAS経由でカレンダーへ自動反映されます。変更・削除は必ず<b>予定表から</b>行ってください（カレンダー直編集は反映されません）。取り込みを「取り込む」にするとカレンダー側の予定が約30秒間隔で「カレンダー取込」行に表示されます。個人用カレンダーへ反映する場合は「取り込まない」（一方向）がおすすめです。<b>「既存の予約をまとめてカレンダーへ送信」</b>は、連携設定より前に登録していた予約をカレンダーに入れたいときに使います（「連携する行」の条件に一致する分だけ送信・何度押しても二重登録されません）。GASスクリプトは<b>カレンダー専用版（納品ファイル）</b>を使用してください。</div>
+          <div class="note"><b>動作：</b>「連携する行」で指定した行の予約が、登録・変更・削除のたびにGAS経由でカレンダーへ自動反映されます（削除がカレンダーに反映されなかった場合は、このボタンをもう一度押すと掃除できます）。変更・削除は必ず<b>予定表から</b>行ってください（カレンダー直編集は反映されません）。取り込みを「取り込む」にするとカレンダー側の予定が約30秒間隔で「カレンダー取込」行に表示されます。個人用カレンダーへ反映する場合は「取り込まない」（一方向）がおすすめです。<b>「既存の予約をまとめてカレンダーへ送信」</b>は、連携設定より前に登録していた予約をカレンダーに入れたいときに使います（「連携する行」の条件に一致する分だけ送信・何度押しても二重登録されません）。GASスクリプトは<b>カレンダー専用版（納品ファイル）</b>を使用してください。</div>
         </div>
       </div>
 
@@ -618,7 +618,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 23;
+var APP_VERSION = 24;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -2011,7 +2011,9 @@ function bindStaticEvents(){
         return formPost(c.url, { action:'caladd', reservation:r, calendarId:c.calendarId });
       }).then(function(){ done++; });
     });
-    seq.then(function(){ toast('カレンダーへ '+done+' 件送信しました'); })
+    seq.then(function(){
+      return formPost(c.url, { action:'calreconcile', ids:list.map(function(r){ return r.id; }), calendarId:c.calendarId });
+    }).then(function(){ toast('カレンダーへ '+done+' 件送信し、残っている不要な予定も掃除しました'); })
       .catch(function(){ toast('送信中にエラーがありました（'+done+' 件完了）', true); });
   });
   document.getElementById('calNow').addEventListener('click', function(){ pullCalendars(true); });
