@@ -255,6 +255,12 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
 .statline{font-size:12px;font-weight:700;color:var(--sub)}
 
 /* ===== トースト ===== */
+.rembar{position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:65;display:flex;gap:10px;align-items:center;
+  background:#fff;border:2px solid #e0a800;border-radius:12px;padding:9px 14px;box-shadow:0 10px 26px rgba(31,35,46,.28);
+  max-width:min(600px,94vw)}
+.remico{font-size:20px;flex:none}
+.remtxt b{display:block;font-size:14px;font-weight:800;color:#1f232e}
+.remtxt span{display:block;font-size:12px;color:var(--sub);font-weight:700}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#2b2f3a;color:#fff;
   font-size:13px;font-weight:700;padding:9px 18px;border-radius:999px;opacity:0;transition:.25s;z-index:80;
   pointer-events:none;box-shadow:0 8px 20px rgba(31,35,46,.4);max-width:calc(100vw - 40px)}
@@ -394,6 +400,14 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
         <label class="f"><span>開始時間</span><input type="time" id="fStart" step="300"></label>
         <span class="dash">〜</span>
         <label class="f"><span>終了時間</span><input type="time" id="fEnd" step="300"></label>
+        <label class="f" style="flex:0 0 150px"><span>リマインド</span>
+          <select id="fRemind">
+            <option value="">なし</option>
+            <option value="10">10分前</option>
+            <option value="30">30分前</option>
+            <option value="60">1時間前</option>
+            <option value="1440">前日</option>
+          </select></label>
       </div>
       <div class="f"><span>種類（色分け）</span><div class="typesel" id="fType"></div></div>
       <label class="f"><span>詳細・メモ（任意）</span><input id="fPurpose" placeholder="例：営業定例会議" maxlength="60"></label>
@@ -419,6 +433,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
         <tr><th>日付</th><td id="dDate"></td></tr>
         <tr><th>時間</th><td id="dTime"></td></tr>
         <tr><th>種類</th><td><span class="dchip" id="dType"><i></i><span></span></span></td></tr>
+        <tr><th>リマインド</th><td id="dRem"></td></tr>
         <tr><th>詳細</th><td id="dPurpose"></td></tr>
       </tbody></table>
     </div>
@@ -445,6 +460,10 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
     <div class="mbody">
       <div class="pane on" data-pane="basic">
         <label class="f" style="margin-top:8px"><span>自分の名前（登録する予約のタイトルの先頭に自動で付きます）</span><input id="sName" placeholder="例：相澤"></label>
+        <div class="srow" style="margin-top:-4px">
+          <button class="btn sm" id="ntfBtn" type="button">🔔 ブラウザ通知を許可する（リマインド用）</button>
+        </div>
+        <div class="note" style="margin-top:0">リマインドを設定した予約は、登録した人の端末にだけ時間帯バナーで表示されます。通知を許可すると、アプリを開いていなくても通知が届きます（ブラウザの仕様上、アプリを開いている間のみ）。</div>
         <div class="seclabel">予約対象（会議室・備品・担当者など、1行につき1件）</div>
         <div class="note" style="margin:0 0 8px">↓ 行を追加・編集したら、モーダル右下の<b style="color:#1a46d8">「設定を保存して閉じる」</b>で確定されます（×やEscでも保存されます）。</div>
         <div id="resList"></div>
@@ -568,6 +587,11 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
   </div>
 </div>
 
+<div class="rembar" id="remBar" hidden>
+  <span class="remico">🔔</span>
+  <div class="remtxt"><b id="remTitle"></b><span id="remSub"></span></div>
+  <button class="btn sm" id="remDismiss">OK</button>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -581,12 +605,12 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
 /* ---------- 定数 ---------- */
 var SLOT_MIN = 30, OPEN_MIN = 7*60, CLOSE_MIN = 21*60;
 var SLOTS = (CLOSE_MIN - OPEN_MIN) / SLOT_MIN;
-var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1', uname:'cr.uname.v1' };
+var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1', uname:'cr.uname.v1', rd:'cr.remDismiss.v1' };
 var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 19;
+var APP_VERSION = 20;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -758,7 +782,7 @@ function seedDemo(){
              user:'', type:type, purpose:purpose, createdAt:Date.now(), updatedAt:Date.now(), demo:true };
   }
   state.reservations = [
-    mk('d1','r1','10:00','12:00','所内打合せ','営業定例会議'),
+    mk('d1','r1','14:00','18:00','所内打合せ','営業定例会議'),
     mk('d2','r1','14:00','15:00','来客','面接（採用）'),
     mk('d3','r1','18:00','19:00','事務所行事','月例会'),
     mk('d4','r2','09:30','11:00','外出','打合せ録音（持ち出し）'),
@@ -768,6 +792,8 @@ function seedDemo(){
     mk('d8','r4','11:00','12:00','外出','税務署訪問'),
     mk('d9','r4','14:00','17:00','所内打合せ','年末調整準備')
   ];
+  state.reservations[0].by='佐藤';
+  state.reservations[0].remind=600;
   demo = true;
   persistAll(); renderAll(); updateDemoChip();
   toast('デモ画面を表示しました（解除は上部「デモ画面 ✕」）');
@@ -786,7 +812,7 @@ function updateDemoChip(){
 }
 
 /* ---------- 描画：共通 ---------- */
-function renderAll(){ renderMeta(); renderBoard(); renderMiniCal(); renderItemView(); renderMonthView(); renderValues(); }
+function renderAll(){ renderMeta(); renderBoard(); renderMiniCal(); renderItemView(); renderMonthView(); renderValues(); checkReminders(); }
 
 var VALUES = [
   { n:'アンテナ',  d:'情報を敏感に拾う', c:'#1a46d8' },
@@ -797,6 +823,34 @@ var VALUES = [
   { n:'挑戦',     d:'失敗を恐れない', c:'#e0a800' },
   { n:'遊び心',   d:'楽しさも仕事のうち', c:'#0891b2' }
 ];
+var REM_LABEL = { 10:'10分前', 30:'30分前', 60:'1時間前', 1440:'前日' };
+function dtOf(x, hmStr){ var p=parts(x.date), t=toMin(hmStr); return new Date(p.y, p.m-1, p.d, Math.floor(t/60), t%60); }
+function remDismissed(){ try{ return JSON.parse(store.getItem(LS.rd)||'{}')||{}; }catch(e){ return {}; } }
+function remMark(k){ var d=remDismissed(); d[k]=1; try{ store.setItem(LS.rd, JSON.stringify(d)); }catch(e){} }
+function checkReminders(){
+  if(!username) return;
+  var now=Date.now(), dis=remDismissed(), due=null;
+  for(var i=0;i<state.reservations.length && !due;i++){
+    var x=state.reservations[i];
+    if(!x.remind || x.by!==username) continue;
+    var key=x.id+'_'+x.remind;
+    if(dis[key]) continue;
+    var t0=dtOf(x, x.start).getTime() - Number(x.remind)*60000;
+    var t1=dtOf(x, x.end).getTime();
+    if(now>=t0 && now<=t1){ due=x; due._key=key; }
+    else if(now>t1){ remMark(key); }
+  }
+  var bar=document.getElementById('remBar');
+  if(!bar) return;
+  if(due){
+    document.getElementById('remTitle').textContent = (due.type||'その他')+' '+due.start+'〜'+due.end+' '+due.resourceName;
+    document.getElementById('remSub').textContent = jpDateFull(due.date) + (due.purpose ? '　'+due.purpose : '');
+    bar.hidden=false; bar.setAttribute('data-key', due._key);
+    if(window.Notification && Notification.permission==='granted'){
+      try{ new Notification('まもなく: '+(due.type||'その他'), { body: due.start+'〜'+due.end+' '+due.resourceName }); }catch(e){}
+    }
+  } else { bar.hidden=true; }
+}
 function renderValues(){
   var box=document.getElementById('vList');
   if(!box) return;
@@ -1100,6 +1154,7 @@ function openForm(opt){
   document.getElementById('fDate').value = dateV;
   document.getElementById('fStart').value = hm(startMin);
   document.getElementById('fEnd').value = hm(endMin);
+  document.getElementById('fRemind').value = editing ? (editing.remind ? String(editing.remind) : '') : '30';
   buildTypeChips();
 
   document.getElementById('formOverlay').classList.add('show');
@@ -1149,6 +1204,7 @@ function openDetail(id){
   var chip = document.getElementById('dType');
   chip.querySelector('i').style.background = typeColor(x.type);
   chip.querySelector('span').textContent = x.type || 'その他';
+  document.getElementById('dRem').textContent = REM_LABEL[Number(x.remind)] || 'なし';
   document.getElementById('dPurpose').textContent = x.purpose || '（記入なし）';
   document.getElementById('detailOverlay').classList.add('show');
 }
@@ -1159,6 +1215,7 @@ function showFormErr(msg){
   e.textContent = msg; e.hidden = false;
 }
 document.getElementById('fStart').addEventListener('change', function(){
+  if(!this.value || !document.getElementById('fEnd').value) return;
   var st=toMin(this.value), en=toMin(document.getElementById('fEnd').value);
   if(en<=st) document.getElementById('fEnd').value = hm(Math.min(CLOSE_MIN, st+SLOT_MIN));
 });
@@ -1175,12 +1232,16 @@ document.getElementById('fSave').addEventListener('click', function(){
   var start = document.getElementById('fStart').value;
   var end = document.getElementById('fEnd').value;
   if(!date){ showFormErr('利用日を選択してください。'); return; }
+  if(!start || !end){ showFormErr('開始時間と終了時間を入力してください。'); return; }
   if(toMin(end) <= toMin(start)){ showFormErr('終了時間は開始時間より後にしてください。'); return; }
+  var remindV = document.getElementById('fRemind').value ? Number(document.getElementById('fRemind').value) : null;
   if(editing){
     var r = {
       id: editing.id, date:date, resourceId:sel[0], resourceName:resName(sel[0]),
       start:start, end:end, user:'', type:pickedType,
       purpose: document.getElementById('fPurpose').value.trim(),
+      by: editing.by || username,
+      remind: remindV,
       createdAt: editing.createdAt, updatedAt: Date.now()
     };
     var c = findConflict(r, editing.id);
@@ -1195,6 +1256,8 @@ document.getElementById('fSave').addEventListener('click', function(){
     var r = { id:uid(), date:date, resourceId:rid, resourceName:resName(rid),
       start:start, end:end, user:'', type:pickedType,
       purpose: prefix + document.getElementById('fPurpose').value.trim(),
+      by: username,
+      remind: remindV,
       createdAt:Date.now(), updatedAt:Date.now() };
     var c = findConflict(r, null);
     if(c){ dup.push(resName(rid)+'（'+c.start+'〜'+c.end+'）'); return; }
@@ -1223,6 +1286,17 @@ document.getElementById('fDelete').addEventListener('click', function(){
   closeForm();
   openDetail(x.id);
 });
+  document.getElementById('ntfBtn').addEventListener('click', function(){
+    if(!window.Notification){ toast('このブラウザは通知に対応していません', true); return; }
+    Notification.requestPermission().then(function(p){
+      toast(p==='granted' ? '通知を許可しました' : '通知は許可されませんでした', p!=='granted');
+    });
+  });
+  document.getElementById('remDismiss').addEventListener('click', function(){
+    var k=document.getElementById('remBar').getAttribute('data-key');
+    if(k) remMark(k);
+    document.getElementById('remBar').hidden=true;
+  });
   document.getElementById('dClose').addEventListener('click', closeDetail);
   document.getElementById('dCancel').addEventListener('click', closeDetail);
   document.getElementById('detailOverlay').addEventListener('click', function(e){
@@ -1340,6 +1414,8 @@ function applyRemote(list){
     return { id:String(x.id), date:String(x.date), resourceId:String(x.resourceId||''),
              resourceName:String(x.resourceName||''), start:String(x.start||'09:00'), end:String(x.end||'10:00'),
              user:String(x.user||''), type:String(x.type||''), purpose:String(x.purpose||''),
+             by:String(x.by||''),
+             remind:(x.remind!=null && x.remind!=='' && !isNaN(Number(x.remind))) ? Number(x.remind) : null,
              createdAt:Number(x.createdAt)||0, updatedAt:Number(x.updatedAt)||0 };
   });
   persistRes(); renderAll();
@@ -2022,6 +2098,7 @@ function bindStaticEvents(){
   loadState();
   var bo={ demo:false, shot:null };
   try{ if(window.CR_BOOT) Object.assign(bo, window.CR_BOOT); }catch(e){}
+  if(bo.uname){ username=String(bo.uname); }
   try{
     var q=new URLSearchParams(location.search);
     if(q.has('demo')) bo.demo=true;
