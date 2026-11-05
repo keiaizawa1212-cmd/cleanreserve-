@@ -150,7 +150,7 @@ input,select{font:inherit;color:inherit}
     linear-gradient(to right,var(--line) 0 1px,transparent 1px),
     linear-gradient(to right,var(--line2) 0 1px,transparent 1px);
   background-size:calc(100%/var(--hours)) 100%,calc(100%/var(--slots)) 100%}
-.blk{position:absolute;top:4px;bottom:4px;border-radius:3px;border:1px solid var(--c);border-left-width:4px;
+.blk{position:absolute;top:3px;bottom:3px;border-radius:3px;border:1px solid var(--c);border-left-width:4px;
   background:color-mix(in srgb,var(--c) 55%,white);
   padding:2px 4px 2px 6px;overflow:hidden;cursor:pointer;transition:box-shadow .12s}
 .blk:hover{box-shadow:0 3px 8px rgba(31,35,46,.22);z-index:3}
@@ -619,7 +619,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 27;
+var APP_VERSION = 28;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -965,8 +965,8 @@ function fitBoard(){
   var avail=window.innerHeight - card.getBoundingClientRect().top - hintH - 6;
   if(avail<160) avail=160;
   var h=Math.floor(avail/rows);
-  if(h>54) h=54;
-  if(h<30) h=30;
+  if(h>88) h=88;
+  if(h<46) h=46;
   b.style.setProperty('--rowh', h+'px');
 }
 
