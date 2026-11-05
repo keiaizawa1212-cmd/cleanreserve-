@@ -171,6 +171,9 @@ input,select{font:inherit;color:inherit}
 .icard .t{font-weight:700;color:var(--blue);white-space:nowrap;font-size:13.5px}
 .icard .u{font-weight:700;white-space:nowrap}
 .icard .p{color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icard .t2{font-weight:700;color:#2c3140;white-space:nowrap;font-size:12.5px}
+.icard li{flex-wrap:wrap}
+.mgc .hol{display:block;font-size:9.5px;color:var(--sun);font-weight:700;line-height:1.2;margin-top:1px}
 .icard .none{padding:14px 12px;color:var(--sub);font-size:12.5px;border-top:1px solid var(--line2)}
 
 /* ===== カレンダー月間 ===== */
@@ -331,7 +334,11 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
     </section>
 
     <section class="view" data-view="item">
-      <div class="datehead"><h2>アイテム別の予約（<span id="itemDate"></span>）</h2><span class="stat" id="itemStat"></span></div>
+      <div class="datehead"><h2>アイテム別の予定（<span id="itemStartLabel"></span>以降 1ヶ月）</h2>
+        <input type="date" id="itemStartPick" aria-label="表示する期間の開始日">
+        <button class="btn sm" id="itemToday">本日</button>
+        <span class="stat" id="itemStat"></span>
+      </div>
       <div class="icards" id="itemView"></div>
     </section>
 
@@ -554,7 +561,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 15;
+var APP_VERSION = 16;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -596,7 +603,7 @@ var state = {
   calEvents: [],
   sync: { mode:'local', firebaseConfig:null, sheetsUrl:'', calendar:{ enabled:false, url:'', calendarId:'' } }
 };
-var editing = null, pickedType = '所内打合せ', currentView = 'list', demo = false;
+var editing = null, pickedType = '所内打合せ', currentView = 'list', demo = false, itemStartDate = null;
 
 /* ---------- ユーティリティ ---------- */
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -628,6 +635,39 @@ function toast(msg,bad){
   t.textContent=msg; t.className='toast show'+(bad?' bad':'');
   clearTimeout(t._h); t._h=setTimeout(function(){ t.className='toast'; }, 2600);
 }
+
+/* ---------- 祝日（日本の国民の祝日を自動計算・振替休日込み） ---------- */
+var _holCache = {};
+function holidayMap(y){
+  if(_holCache[y]) return _holCache[y];
+  var H={};
+  function add(m,d,name){ H[y+'-'+pad(m)+'-'+pad(d)]=name; }
+  function nthDow(m,dow,n){ var d1=new Date(y,m-1,1); var off=(dow-d1.getDay()+7)%7; return 1+off+(n-1)*7; }
+  add(1,1,'元日');
+  add(1,nthDow(1,1,2),'成人の日');
+  add(2,11,'建国記念の日');
+  add(2,23,'天皇誕生日');
+  add(3, Math.floor(20.8431+0.242194*(y-1980))-Math.floor((y-1980)/4), '春分の日');
+  add(4,29,'昭和の日');
+  add(5,3,'憲法記念日'); add(5,4,'みどりの日'); add(5,5,'こどもの日');
+  add(7,nthDow(7,1,3),'海の日');
+  add(8,11,'山の日');
+  add(9,nthDow(9,1,3),'敬老の日');
+  add(9, Math.floor(23.2488+0.242194*(y-1980))-Math.floor((y-1980)/4), '秋分の日');
+  add(10,nthDow(10,1,2),'スポーツの日');
+  add(11,3,'文化の日');
+  add(11,23,'勤労感謝の日');
+  Object.keys(H).sort().forEach(function(k){
+    var q=k.split('-'); var d=new Date(+q[0],+q[1]-1,+q[2]);
+    if(d.getDay()!==0) return;
+    var nx=addDays(k,1), i=0;
+    while(H[nx] && i<7){ nx=addDays(nx,1); i++; }
+    H[nx]='振替休日';
+  });
+  _holCache[y]=H;
+  return H;
+}
+function holidayName(ds){ var q=parts(ds); return holidayMap(q.y)[ds] || ''; }
 
 /* ---------- 永続化 ---------- */
 function persistRes(){ store.setItem(LS.res, JSON.stringify(state.reservations)); }
@@ -721,12 +761,11 @@ function updateDemoChip(){
 function renderAll(){ renderMeta(); renderBoard(); renderMiniCal(); renderItemView(); renderMonthView(); }
 
 function renderMeta(){
-  document.getElementById('dateTitle').textContent = jpDateFull(state.date);
-  document.getElementById('itemDate').textContent = jpDateFull(state.date);
+  var hn0 = holidayName(state.date);
+  document.getElementById('dateTitle').textContent = jpDateFull(state.date) + (hn0 ? ' 【'+hn0+'】' : '');
   document.getElementById('datePick').value = state.date;
   var n = state.reservations.filter(function(x){ return x.date===state.date; }).length;
   document.getElementById('statLine').textContent = n + '件の予約';
-  document.getElementById('itemStat').textContent = n + '件';
   document.getElementById('dayEmpty') && (document.getElementById('dayEmpty').hidden = n !== 0);
   updateDemoChip();
   renderBoard();
@@ -822,11 +861,13 @@ function renderMiniCal(){
   for(var i=0;i<weeks*7;i++){
     var dt = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i);
     var ds = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+    var hn = holidayName(ds);
     var cls = 'mcd';
     if(dt.getMonth()!==p.m-1) cls+=' out';
-    if(dt.getDay()===0) cls+=' sun'; else if(dt.getDay()===6) cls+=' sat';
+    if(dt.getDay()===0 || hn) cls+=' sun'; else if(dt.getDay()===6) cls+=' sat';
     if(ds===state.date) cls+=' cur';
-    h += '<button class="'+cls+'" data-date="'+ds+'"'+(counts[ds]?' title="'+counts[ds]+'件の予約"':'')+'>'+dt.getDate()+
+    var tip=[]; if(counts[ds]) tip.push(counts[ds]+'件の予約'); if(hn) tip.push(hn);
+    h += '<button class="'+cls+'" data-date="'+ds+'"'+(tip.length?' title="'+esc(tip.join(' / '))+'"':'')+'>'+dt.getDate()+
          (counts[ds]?'<i></i>':'')+'</button>';
   }
   document.getElementById('miniCal').innerHTML = h;
@@ -835,18 +876,25 @@ function renderMiniCal(){
 /* ---------- 描画：アイテム別 ---------- */
 function renderItemView(){
   var box = document.getElementById('itemView');
-  var day = state.reservations.filter(function(x){ return x.date===state.date; })
-    .sort(function(a,b){ return toMin(a.start)-toMin(b.start); });
+  if(!itemStartDate) itemStartDate = state.date;
+  var endD = addDays(itemStartDate, 30);
+  var list = state.reservations.filter(function(x){ return x.date>=itemStartDate && x.date<=endD; })
+    .sort(function(a,b){ return a.date===b.date ? toMin(a.start)-toMin(b.start) : (a.date<b.date?-1:1); });
+  document.getElementById('itemStartLabel').textContent = jpDate(itemStartDate);
+  document.getElementById('itemStartPick').value = itemStartDate;
+  document.getElementById('itemStat').textContent = '期間内 '+list.length+'件';
   var h='';
   state.resources.forEach(function(r){
-    var list = day.filter(function(x){ return x.resourceId===r.id; });
-    h += '<div class="icard"><h3 style="background:'+r.color+'">'+esc(r.name)+'<small style="font-weight:700">'+list.length+'件</small></h3>';
-    if(!list.length){ h += '<div class="none">この日の予約はありません</div>'; }
+    var rl = list.filter(function(x){ return x.resourceId===r.id; });
+    h += '<div class="icard"><h3 style="background:'+r.color+'">'+esc(r.name)+'<small style="font-weight:700">'+rl.length+'件</small></h3>';
+    if(!rl.length){ h += '<div class="none">'+jpDate(itemStartDate)+'以降1ヶ月の予定はありません</div>'; }
     else{
       h += '<ul>';
-      list.forEach(function(x){
+      rl.forEach(function(x){
+        var hol = holidayName(x.date);
         h += '<li class="'+(isFuture(x)?'':'past')+'" data-id="'+esc(x.id)+'">'
-          +  '<span class="t">'+esc(x.start)+'〜'+esc(x.end)+'</span>'
+          +  '<span class="t"'+(hol?' style="color:var(--sun)"':'')+'>'+jpDate(x.date)+'</span>'
+          +  '<span class="t2">'+esc(x.start)+'〜'+esc(x.end)+'</span>'
           +  '<span class="u" style="color:'+typeColor(x.type)+'">'+esc(x.type||'その他')+'</span>'
           +  '<span class="p">'+esc(x.purpose||'')+'</span></li>';
       });
@@ -856,7 +904,7 @@ function renderItemView(){
   });
   box.innerHTML = h;
   Array.prototype.forEach.call(box.querySelectorAll('li[data-id]'), function(li){
-    li.addEventListener('click', function(){ openForm({ mode:'edit', id:li.getAttribute('data-id') }); });
+    li.addEventListener('click', function(){ openDetail(li.getAttribute('data-id')); });
   });
 }
 
@@ -881,7 +929,9 @@ function renderMonthView(){
     var cls='mgc';
     if(dt.getMonth()!==p.m-1) cls+=' out';
     if(ds===todayStr()) cls+=' today';
-    h += '<div class="'+cls+'" data-date="'+ds+'"><b'+(dt.getDay()===0?' style="color:var(--sun)"':dt.getDay()===6?' style="color:var(--sat)"':'')+'>'+dt.getDate()+'</b>'+
+    var hn2 = holidayName(ds);
+    h += '<div class="'+cls+'" data-date="'+ds+'"><b'+(dt.getDay()===0||hn2?' style="color:var(--sun)"':dt.getDay()===6?' style="color:var(--sat)"':'')+'>'+dt.getDate()+'</b>'+
+         (hn2?'<span class="hol">'+esc(hn2)+'</span>':'')+
          (list.length?'<span class="cnt">'+list.length+'</span>':'');
     list.slice(0,3).forEach(function(x){
       h += '<div class="pv">'+hm(toMin(x.start))+' '+esc(x.type||'その他')+(x.purpose?'『'+esc(x.purpose.slice(0,10))+'』':'')+'</div>';
@@ -900,6 +950,7 @@ function switchView(name){
   Array.prototype.forEach.call(document.querySelectorAll('.view'), function(v){
     v.classList.toggle('on', v.getAttribute('data-view')===name); });
   if(name==='list') requestAnimationFrame(fitBoard);
+  if(name==='item'){ itemStartDate = state.date; renderItemView(); }
 }
 
 /* ---------- ボード操作（ドラッグ選択 / タップ） ---------- */
@@ -1036,7 +1087,8 @@ function openDetail(id){
   if(!x){ toast('予約が見つかりません（すでに削除された可能性）', true); renderAll(); return; }
   detailId = id;
   document.getElementById('dRes').textContent = x.resourceName || resName(x.resourceId) || '-';
-  document.getElementById('dDate').textContent = jpDateFull(x.date);
+  var hnd = holidayName(x.date);
+  document.getElementById('dDate').textContent = jpDateFull(x.date) + (hnd ? ' 【'+hnd+'】' : '');
   document.getElementById('dTime').textContent = x.start + '〜' + x.end;
   var chip = document.getElementById('dType');
   chip.querySelector('i').style.background = typeColor(x.type);
@@ -1679,6 +1731,10 @@ function bindStaticEvents(){
     var c=e.target.closest('.mgc');
     if(c && c.getAttribute('data-date')){ state.date=c.getAttribute('data-date'); renderAll(); switchView('list'); }
   });
+  document.getElementById('itemStartPick').addEventListener('change', function(){
+    if(this.value){ itemStartDate=this.value; renderItemView(); } });
+  document.getElementById('itemToday').addEventListener('click', function(){
+    itemStartDate=todayStr(); renderItemView(); });
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(t){
     t.addEventListener('click', function(){ switchView(t.getAttribute('data-view')); });
   });
