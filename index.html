@@ -103,6 +103,14 @@ input,select{font:inherit;color:inherit}
 .qauthor{padding:2px 12px 10px;text-align:right;font-size:12px;font-weight:700;color:var(--sub)}
 .qauthor::before{content:"— ";}
 .qpanel{grid-column:1/-1}
+.vpanel{grid-column:1/-1}
+.vpanel .mchead{font-size:12px}
+.vlist{padding:8px 10px 10px;display:grid;gap:5px}
+.vitem{display:flex;align-items:center;gap:8px;background:var(--lav);border:1px solid #d8ccf2;border-radius:7px;padding:6px 10px}
+.vitem i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--vc,var(--blue))}
+.vitem b{font-size:13px;color:var(--lavink);font-weight:800;letter-spacing:.04em}
+.vitem span{font-size:10.5px;color:var(--sub);font-weight:700;margin-left:auto}
+.qpanel{grid-column:1/-1}
 
 /* ===== メイン ===== */
 .main{flex:1;min-width:0;display:grid;gap:10px}
@@ -328,6 +336,10 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
       <div class="mchead" style="justify-content:center">今日の一言</div>
       <div class="qbody" id="qText"></div>
       <div class="qauthor" id="qAuthor"></div>
+    </div>
+    <div class="panel vpanel">
+      <div class="mchead" style="justify-content:center">私たちのバリュー</div>
+      <div class="vlist" id="vList"></div>
     </div>
   </aside>
 
@@ -574,7 +586,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 18;
+var APP_VERSION = 19;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -774,8 +786,26 @@ function updateDemoChip(){
 }
 
 /* ---------- 描画：共通 ---------- */
-function renderAll(){ renderMeta(); renderBoard(); renderMiniCal(); renderItemView(); renderMonthView(); }
+function renderAll(){ renderMeta(); renderBoard(); renderMiniCal(); renderItemView(); renderMonthView(); renderValues(); }
 
+var VALUES = [
+  { n:'アンテナ',  d:'情報を敏感に拾う', c:'#1a46d8' },
+  { n:'レスポンス', d:'すぐ返す、すぐ動く', c:'#ea7317' },
+  { n:'会話',     d:'率直に、丁寧に', c:'#0a8f72' },
+  { n:'成長',     d:'昨日の自分を超える', c:'#7c3aed' },
+  { n:'信頼',     d:'約束を守り続ける', c:'#d0342c' },
+  { n:'挑戦',     d:'失敗を恐れない', c:'#e0a800' },
+  { n:'遊び心',   d:'楽しさも仕事のうち', c:'#0891b2' }
+];
+function renderValues(){
+  var box=document.getElementById('vList');
+  if(!box) return;
+  var h='';
+  VALUES.forEach(function(v){
+    h += '<div class="vitem" style="--vc:'+v.c+'"><i></i><b>'+esc(v.n)+'</b><span>'+esc(v.d)+'</span></div>';
+  });
+  box.innerHTML=h;
+}
 function renderQuote(){
   var q = parts(state.date);
   var doy = Math.floor((new Date(q.y, q.m-1, q.d) - new Date(q.y, 0, 0)) / 86400000);
