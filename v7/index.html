@@ -96,6 +96,13 @@ input,select{font:inherit;color:inherit}
 .sidelinks{display:grid;gap:4px;font-size:12.5px;padding:2px 4px}
 .sidelinks button{text-align:left;color:var(--blue);text-decoration:underline;padding:1px 0}
 .sidelinks button:hover{color:#0d2f9e}
+.qpanel{padding:0}
+.qpanel .mchead{font-size:12px}
+.qbody{padding:10px 12px 2px;font-size:12.5px;line-height:1.85;color:#33384a}
+.qbody::before{content:"“ ";font-size:20px;font-weight:700;color:var(--blue);line-height:0;vertical-align:-4px;margin-right:1px}
+.qauthor{padding:2px 12px 10px;text-align:right;font-size:12px;font-weight:700;color:var(--sub)}
+.qauthor::before{content:"— ";}
+.qpanel{grid-column:1/-1}
 
 /* ===== メイン ===== */
 .main{flex:1;min-width:0;display:grid;gap:10px}
@@ -316,6 +323,11 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
     <div class="sidelinks">
       <button id="setLink">設定・データ同期を開く</button>
       <button id="calLink">Googleカレンダー連携を開く</button>
+    </div>
+    <div class="panel qpanel">
+      <div class="mchead" style="justify-content:center">今日の一言</div>
+      <div class="qbody" id="qText"></div>
+      <div class="qauthor" id="qAuthor"></div>
     </div>
   </aside>
 
@@ -562,7 +574,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 17;
+var APP_VERSION = 18;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -574,6 +586,7 @@ var TYPES = [
   { n:'その他',      c:'#0891b2' }
 ];
 var WD = ['日','月','火','水','木','金','土'];
+var QUOTES = [["素直な心になれば、ものごとはよく分かる。", "松下幸之助"], ["挑戦なくして、革新なし。", "本田宗一郎"], ["今日という一日を、真剣に完璧に生きること。", "稲盛和夫"], ["ハングリーであれ、愚かであれ。", "スティーブ・ジョブズ"], ["失敗は、もっと巧みにやり直す機会である。", "ヘンリー・フォード"], ["リスクとは、自分が何をしているのか分かっていないことだ。", "ウォーレン・バフェット"], ["戦略とは、何をやらないかを決めることである。", "P・F・ドラッカー"], ["効率は正しく事をすること。効果は正しい事をすること。", "P・F・ドラッカー"], ["問題をはっきり書き表せば、半分は解決したも同然だ。", "C・F・ケタリング"], ["市場の変化より速く、自分たちを変えよ。", "ジャック・ウェルチ"], ["一勝九敗でも、最後に勝てばいい。", "柳井正"], ["夢は大きく。数字で語れる夢を持て。", "孫正義"], ["変化・変革・冒険を、合言葉に。", "三木谷浩史"], ["成功は悪い教師だ。賢い人間をミスから守ってくれるが、成長させてはくれない。", "ビル・ゲイツ"], ["設備の近代化は、心の近代化から。", "土光敏夫"], ["商人は、よろこばれるのが本業だ。", "伊藤雅俊"], ["いいものは安く売る。安く売れば、よく売れる。", "小林一三"], ["利益を追うだけでなく、道義にかなう商いを。", "渋沢栄一"], ["顧客に執着せよ。競争相手ではなく。", "ジェフ・ベゾス"], ["失敗はオプションだ。そこで学ばなければ、イノベーションは起こらない。", "イーロン・マスク"], ["完璧にしてから出すな。出しながら磨け。", "マーク・ザッカーバーグ"], ["今日は残酷だ。明日はもっと残酷だ。だが明後日は美しい。", "ジャック・マー"], ["人のやらないことをやれ。", "出光佐三"], ["情熱があれば、方法は見つかる。", "永守重信"], ["天は人の上に人を造らず、人の下に人を造らず。", "福沢諭吉"], ["私たちの仕事は、お客様の心を温めること。", "リッツ・カールトン クレドより"], ["小さく生んで、大きく育てる。", "松下幸之助"], ["まず、やってみる。考えながら、やってみる。", "本田宗一郎"], ["心を尽くせば、道は開ける。", "稲盛和夫"], ["行動のすべてに、誠実さを。", "渋沢栄一"], ["絶好のチャンスは、諦めた人のすぐ先にある。", "リチャード・ブランソン"]];
 function typeColor(n){ for(var i=0;i<TYPES.length;i++) if(TYPES[i].n===n) return TYPES[i].c; return '#9aa1b4'; }
 
 /* ★★★ 配布用プリセット（社員に配る前にここだけ編集）★★★
@@ -763,9 +776,19 @@ function updateDemoChip(){
 /* ---------- 描画：共通 ---------- */
 function renderAll(){ renderMeta(); renderBoard(); renderMiniCal(); renderItemView(); renderMonthView(); }
 
+function renderQuote(){
+  var q = parts(state.date);
+  var doy = Math.floor((new Date(q.y, q.m-1, q.d) - new Date(q.y, 0, 0)) / 86400000);
+  var sel = QUOTES[(doy - 1) % QUOTES.length];
+  var t = document.getElementById('qText'), a = document.getElementById('qAuthor');
+  if(t) t.textContent = sel[0];
+  if(a) a.textContent = sel[1];
+}
+
 function renderMeta(){
   var hn0 = holidayName(state.date);
   document.getElementById('dateTitle').textContent = jpDateFull(state.date) + (hn0 ? ' 【'+hn0+'】' : '');
+  renderQuote();
   document.getElementById('datePick').value = state.date;
   var n = state.reservations.filter(function(x){ return x.date===state.date; }).length;
   document.getElementById('statLine').textContent = n + '件の予約';
