@@ -1,0 +1,2252 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Re三郎 — 予約表</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f2f3f7; --panel:#ffffff; --ink:#1f232e; --sub:#5c6270;
+  --line:#c9ccd8; --line2:#e3e5ee; --stripe:#f4f5fa;
+  --blue:#1a46d8; --lav:#ece7fb; --lavink:#5b3fb0;
+  --sun:#d0342c; --sat:#2456c4;
+  --slot:30px; --labelw:150px; --hours:14; --slots:28;
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:"Meiryo","Meiryo UI","Hiragino Kaku Gothic ProN","Yu Gothic UI",system-ui,sans-serif;
+  background:var(--bg); color:var(--ink); font-size:14.5px; line-height:1.55;
+}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font:inherit;color:inherit}
+[hidden]{display:none!important}
+
+/* ===== タブバー ===== */
+.tabbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  background:#e8eaf1;border-bottom:1px solid var(--line);padding:0 10px}
+.tabs{display:flex}
+.tab{padding:9px 20px 8px;font-size:14px;font-weight:700;color:#4a4f5e;
+  border-right:1px solid var(--line);background:linear-gradient(#f2f3f7,#dfe1ea);display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--ink)}
+.tab.on{background:linear-gradient(#fdfdfd,#e9ebf2);color:var(--ink);box-shadow:inset 0 3px 0 var(--blue)}
+.grow{flex:1}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:999px;
+  padding:4px 11px;font-size:12px;font-weight:700;color:var(--sub);white-space:nowrap}
+.chip:hover{color:var(--ink)}
+.chip.demochip{background:#fdece9;border-color:#f0b7ac;color:#c2410c}
+.chip.demochip:hover{background:#fbe0da}
+.cdot{width:8px;height:8px;border-radius:50%;background:#0a9c66;flex:none}
+.cdot.err{background:#d0342c} .cdot.busy{background:#d97706;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.iconbtn{width:32px;height:32px;border-radius:6px;display:grid;place-items:center;color:var(--sub);border:1px solid var(--line);background:#fff;flex:none}
+.iconbtn:hover{color:var(--ink);background:var(--stripe)}
+.btn{border-radius:6px;padding:7px 14px;font-weight:700;font-size:13.5px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);white-space:nowrap}
+.btn:hover{background:var(--stripe)}
+.btn.primary{background:var(--blue);color:#fff;border-color:#12379f}
+.btn.primary:hover{background:#173cc0}
+.btn.danger{color:var(--sun);border-color:#e4b6b2}
+.btn.danger:hover{background:#fdf1f0}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--line2)}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+
+/* ===== シェル ===== */
+.shell{display:flex;gap:12px;max-width:1280px;margin:0 auto;padding:12px;align-items:flex-start}
+.side{width:236px;flex:none;display:grid;gap:10px;position:sticky;top:52px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.mchead{display:flex;align-items:center;justify-content:space-between;background:#565b68;color:#fff;
+  padding:5px 6px;font-size:13px}
+.mchead button{color:#fff;width:24px;height:24px;border-radius:4px;font-size:11px}
+.mchead button:hover{background:rgba(255,255,255,.2)}
+.mcgrid{display:grid;grid-template-columns:repeat(7,1fr);padding:6px;gap:1px}
+.mcw{font-size:10.5px;text-align:center;padding:3px 0;color:#fff;background:#6d7280}
+.mcw.sun{background:#a24640}.mcw.sat{background:#41608f}
+.mcd{position:relative;text-align:center;font-size:12.5px;padding:4px 0;border:2px solid transparent;border-radius:4px;min-height:26px}
+.mcd.out{color:#b6bac6}
+.mcd.sun{color:var(--sun)}.mcd.sat{color:var(--sat)}
+.mcd:hover{background:var(--lav)}
+.mcd.cur{border-color:#2b2f3a;font-weight:700}
+.mcd i{position:absolute;left:50%;transform:translateX(-50%);bottom:1px;width:4px;height:4px;border-radius:50%;background:var(--blue)}
+.dnav{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.dnav button{background:var(--lav);color:var(--lavink);border:1px solid #d8ccf2;border-radius:999px;
+  padding:7px 4px;font-size:13px;font-weight:700}
+.dnav button:hover{background:#e2d9f8}
+.guidebtn{display:block;width:100%;text-align:center;background:#fff;border:1px solid var(--line);
+  border-radius:999px;padding:8px;font-size:13px;font-weight:700;color:var(--sub)}
+.guidebtn::before{content:"💬 "}
+.guidebtn:hover{color:var(--ink)}
+.memwarn{max-width:1280px;margin:8px auto 0;padding:0 12px}
+.memwarn div{background:#fffbe8;border:1px solid #eadfae;color:#7a6a2e;font-size:12.5px;font-weight:600;
+  border-radius:8px;padding:8px 12px}
+.dtable{width:100%;border-collapse:collapse;font-size:14px}
+.dtable th{width:72px;text-align:left;font-size:12px;color:var(--sub);padding:8px 10px 8px 0;vertical-align:top;border-bottom:1px solid var(--line2)}
+.dtable td{padding:8px 0;border-bottom:1px solid var(--line2);font-weight:700}
+.dtable tr:last-child td,.dtable tr:last-child th{border-bottom:none}
+.dchip{display:inline-flex;align-items:center;gap:6px;font-weight:800}
+.dchip i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.gitem{margin-bottom:11px}
+.gitem b{display:block;font-size:13.5px;color:var(--ink);margin-bottom:2px}
+.gitem span{font-size:12.5px;color:var(--sub);line-height:1.65;display:block}
+#bulkRows{width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:inherit;
+  font-size:13px;line-height:1.6;resize:vertical;background:#fff}
+#bulkRows:focus{outline:2px solid rgba(26,70,216,.35);border-color:var(--blue)}
+.sidelinks{display:grid;gap:4px;font-size:12.5px;padding:2px 4px}
+.sidelinks button{text-align:left;color:var(--blue);text-decoration:underline;padding:1px 0}
+.sidelinks button:hover{color:#0d2f9e}
+.qpanel{padding:0}
+.qpanel .mchead{font-size:12px}
+.qbody{padding:10px 12px 2px;font-size:12.5px;line-height:1.85;color:#33384a}
+.qbody::before{content:"“ ";font-size:20px;font-weight:700;color:var(--blue);line-height:0;vertical-align:-4px;margin-right:1px}
+.qauthor{padding:2px 12px 10px;text-align:right;font-size:12px;font-weight:700;color:var(--sub)}
+.qauthor::before{content:"— ";}
+.qpanel{grid-column:1/-1}
+.vpanel{grid-column:1/-1}
+.vpanel .mchead{font-size:12px}
+.vlist{padding:8px 10px 10px;display:grid;gap:5px}
+.vitem{display:flex;align-items:center;gap:8px;background:var(--lav);border:1px solid #d8ccf2;border-radius:7px;padding:6px 10px}
+.vitem i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--vc,var(--blue))}
+.vitem b{font-size:13px;color:var(--lavink);font-weight:800;letter-spacing:.04em}
+.vitem span{font-size:10.5px;color:var(--sub);font-weight:700;margin-left:auto}
+.qpanel{grid-column:1/-1}
+
+/* ===== メイン ===== */
+.main{flex:1;min-width:0;display:grid;gap:10px}
+.view{display:none}.view.on{display:block}
+.datehead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.datehead h2{font-size:17px}
+.datehead input[type=date]{border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:#fff;font-size:13px}
+.stat{color:var(--sub);font-size:13px;font-weight:700}
+.mnav{display:none;gap:4px}
+.mnav button{border:1px solid var(--line);background:var(--lav);color:var(--lavink);border-radius:999px;
+  padding:4px 10px;font-size:12.5px;font-weight:700}
+.dayempty{background:#fff;border:1px dashed #b9bdcc;color:var(--sub);border-radius:8px;padding:9px 14px;
+  font-size:13px;font-weight:600}
+.boardcard{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:auto;
+  box-shadow:0 2px 6px rgba(31,35,46,.06)}
+.board{width:100%;user-select:none;-webkit-user-select:none}
+.hrow{display:flex;position:sticky;top:0;z-index:6;background:#eef0f5;border-bottom:1px solid var(--line)}
+.corner{width:var(--labelw);flex:none;position:sticky;left:0;z-index:7;background:#e2e4ec;border-right:1px solid var(--line);
+  font-size:11px;color:#3a3f4d;font-weight:700;padding:6px 8px;text-align:center}
+.hcells{flex:1;display:flex;position:relative;min-width:calc(var(--slot)*24)}
+.hcell{flex:1;font-size:13px;font-weight:700;color:#2c3140;padding:6px 0 6px 5px;border-left:1px solid var(--line)}
+.hcell:first-child{border-left:none}
+.nowdot{position:absolute;top:7px;bottom:0;width:2px;background:#d0342c;opacity:.65;pointer-events:none}
+.row{display:flex;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row:nth-child(odd){background:var(--stripe)}
+.rlabel{width:var(--labelw);flex:none;position:sticky;left:0;z-index:5;background:inherit;border-right:1px solid var(--line);
+  display:flex;align-items:center;gap:7px;padding:5px 8px;min-height:var(--rowh,54px)}
+.row:nth-child(odd) .rlabel{background:var(--stripe)}
+.rlabel i{width:9px;height:9px;border-radius:2px;flex:none}
+.rlabel span{font-size:15.5px;font-weight:800;line-height:1.3;display:block}
+.rlabel .nrow{display:flex;align-items:center;gap:5px;min-width:0;width:100%}
+.rlabel .nrow>span{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rlabel .calon{flex:none;text-decoration:none;font-size:10px;font-weight:800;color:#1a56c3;background:#e8f0fe;border:1px solid #c6dafc;border-radius:999px;padding:1px 6px;line-height:1.5;white-space:nowrap}
+.track{flex:1;position:relative;min-width:calc(var(--slot)*var(--slots));
+  background-image:
+    linear-gradient(to right,var(--line) 0 1px,transparent 1px),
+    linear-gradient(to right,var(--line2) 0 1px,transparent 1px);
+  background-size:calc(100%/var(--hours)) 100%,calc(100%/var(--slots)) 100%}
+.blk{position:absolute;top:3px;bottom:3px;border-radius:3px;border:1px solid var(--c);border-left-width:4px;
+  background:color-mix(in srgb,var(--c) 55%,white);
+  padding:2px 4px 2px 6px;overflow:hidden;cursor:pointer;transition:box-shadow .12s}
+.blk:hover{box-shadow:0 3px 8px rgba(31,35,46,.22);z-index:3}
+.blk b{display:block;font-size:14.5px;font-weight:800;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#141826}
+.blk span{display:block;font-size:13px;font-weight:700;color:#191d2c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.multisel{border:1px solid var(--line);border-radius:6px;max-height:150px;overflow:auto;background:#fff}
+.f .multisel label{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:13.5px;font-weight:700;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line2);margin:0}
+.f .multisel label:last-child{border-bottom:none}
+.f .multisel label:hover{background:var(--lav)}
+.f .multisel input{width:15px;height:15px;min-width:15px;accent-color:var(--blue);flex:none;border:none;padding:0;background:transparent}
+.f .multisel i{width:9px;height:9px;border-radius:2px;flex:none}
+.typesel{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tchip{display:flex;align-items:center;justify-content:center;gap:5px;border:1.5px solid var(--line);
+  border-radius:6px;padding:6px 4px;font-size:11.5px;font-weight:700;background:#fff;line-height:1.2;text-align:center}
+.tchip i{width:9px;height:9px;border-radius:2px;flex:none}
+.tchip.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,white)}
+.blk.past{opacity:.45;filter:saturate(.5)}
+.blk.calblk{border-style:dashed}
+.sel{position:absolute;top:4px;bottom:4px;border:1.5px dashed var(--blue);background:rgba(26,70,216,.12);
+  border-radius:3px;pointer-events:none;z-index:2}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:#d0342c;pointer-events:none;z-index:4;opacity:.8}
+.nowline::before{content:"";position:absolute;top:-4px;left:-3px;width:8px;height:8px;border-radius:50%;background:#d0342c}
+.hint{text-align:center;color:var(--sub);font-size:12px}
+.hint .ver{display:inline-block;margin-left:8px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:1px 10px;font-weight:700;cursor:pointer}
+.hint .ver:hover{color:var(--ink)}
+
+/* ===== アイテム別 ===== */
+.icards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px}
+.icard{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.icard>h3{font-size:14px;padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.icard ul{list-style:none}
+.icard li{display:flex;gap:10px;padding:7px 12px;border-top:1px solid var(--line2);font-size:14.5px;cursor:pointer;align-items:baseline}
+.icard li:hover{background:var(--lav)}
+.icard li.past{opacity:.5}
+.icard .t{font-weight:700;color:var(--blue);white-space:nowrap;font-size:13.5px}
+.icard .u{font-weight:700;white-space:nowrap}
+.icard .p{color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icard .t2{font-weight:700;color:#2c3140;white-space:nowrap;font-size:12.5px}
+.icard li{flex-wrap:wrap}
+.mgc .hol{display:block;font-size:9.5px;color:var(--sun);font-weight:700;line-height:1.2;margin-top:1px}
+.icard .none{padding:14px 12px;color:var(--sub);font-size:12.5px;border-top:1px solid var(--line2)}
+
+/* ===== カレンダー月間 ===== */
+.mfbar{display:flex;flex-wrap:wrap;gap:5px;padding:2px 0 8px}
+.mfchip{border:1.5px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);font-size:12.5px;font-weight:800;padding:3.5px 12px;cursor:pointer}
+.mfchip.on{border-color:var(--blue);background:#e8f0fe;color:var(--blue)}
+.monthgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:#fff;border:1px solid var(--line);
+  border-radius:8px;padding:8px}
+.mgw{font-size:12px;font-weight:700;text-align:center;padding:5px 0;border-radius:4px;color:#fff;background:#6d7280}
+.mgw.sun{background:#a24640}.mgw.sat{background:#41608f}
+.mgc{min-height:78px;border:1px solid var(--line2);border-radius:5px;padding:4px 5px;font-size:12.5px;cursor:pointer;background:#fff}
+.mgc:hover{border-color:var(--blue)}
+.mgc.out{background:var(--stripe);color:#b6bac6}
+.mgc.today{border:2px solid #2b2f3a}
+.mgc b{font-size:12.5px}
+.mgc.sun b{color:var(--sun)}.mgc.sat b{color:var(--sat)}
+.mgc .cnt{display:inline-block;margin-left:4px;font-size:10px;font-weight:700;color:#fff;background:var(--blue);border-radius:8px;padding:0 6px}
+.mgc .pv{color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nores{padding:30px;text-align:center;color:var(--sub);font-size:13px;font-weight:600}
+
+/* ===== モーダル ===== */
+.overlay{position:fixed;inset:0;background:rgba(31,35,46,.5);display:none;align-items:flex-start;
+  justify-content:center;padding:6vh 16px 16px;z-index:50}
+.overlay.show{display:flex}
+.overlay.top{z-index:60}
+@keyframes pop{from{transform:translateY(10px);opacity:0}}
+.modal{background:#fff;border-radius:10px;width:min(460px,100%);box-shadow:0 20px 50px rgba(31,35,46,.35);
+  animation:pop .16s ease;max-height:88vh;display:flex;flex-direction:column}
+.modal.wide{width:min(740px,100%)}
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0}
+.mhead h3{font-size:16px}
+.mbody{padding:12px 16px 4px;overflow:auto}
+.mfoot{display:flex;gap:8px;align-items:center;padding:10px 16px 14px;border-top:1px solid var(--line2);margin-top:10px}
+.mfoot .spacer{flex:1}
+.f{display:block;margin-bottom:11px}
+.f>span{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:4px}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff}
+.f textarea{resize:vertical;font-size:12px;line-height:1.5;font-family:ui-monospace,Menlo,Consolas,monospace}
+.f input:focus,.f select:focus,.f textarea:focus{outline:2px solid rgba(26,70,216,.35);border-color:var(--blue)}
+.times{display:flex;gap:8px;align-items:flex-end}
+.times .f{flex:1}
+.times .dash{padding-bottom:9px;color:var(--sub);font-weight:700}
+.err{background:#fdf1f0;border:1px solid #e4b6b2;color:#a3271f;font-size:13px;font-weight:700;
+  border-radius:6px;padding:8px 12px;margin-bottom:11px}
+.ronote{background:#fffbe8;border:1px solid #eadfae;color:#7a6a2e;font-size:12.5px;font-weight:600;
+  border-radius:6px;padding:8px 12px;margin-bottom:11px}
+
+/* ===== 設定 ===== */
+.stabs{display:flex;gap:4px;background:var(--line2);border-radius:8px;padding:4px;margin:10px 16px 0}
+.stab{flex:1;text-align:center;border-radius:5px;padding:6px 0;font-size:13px;font-weight:700;color:var(--sub)}
+.stab.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(31,35,46,.15)}
+.pane{display:none}.pane.on{display:block}
+.seclabel{font-size:12px;font-weight:700;color:var(--sub);margin:13px 0 7px}
+.srow{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.srow input{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.rcards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rcard{border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;cursor:pointer;background:#fff}
+.rcard.on{border-color:var(--blue);background:#eef2fd}
+.rcard b{display:block;font-size:13px}
+.rcard small{color:var(--sub);font-size:11px;line-height:1.4;display:block;margin-top:2px}
+.syncbox{border:1px solid var(--line);border-radius:8px;padding:11px;margin-top:9px;background:#fafbfe}
+.note{font-size:11.5px;color:var(--sub);line-height:1.65;margin-top:7px}
+.note b{color:#7a6a2e}
+pre.gas{background:#2b2f3a;color:#dbe4ff;font-size:11px;line-height:1.5;border-radius:8px;padding:11px 13px;
+  overflow:auto;max-height:220px;white-space:pre;margin:7px 0}
+ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;margin:5px 0 9px}
+.statline{font-size:12px;font-weight:700;color:var(--sub)}
+
+/* ===== トースト ===== */
+.rembar{position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:65;display:flex;gap:10px;align-items:center;
+  background:#fff;border:2px solid #e0a800;border-radius:12px;padding:9px 14px;box-shadow:0 10px 26px rgba(31,35,46,.28);
+  max-width:min(600px,94vw)}
+.remico{font-size:20px;flex:none}
+.remtxt b{display:block;font-size:14px;font-weight:800;color:#1f232e}
+.remtxt span{display:block;font-size:12px;color:var(--sub);font-weight:700}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#2b2f3a;color:#fff;
+  font-size:13px;font-weight:700;padding:9px 18px;border-radius:999px;opacity:0;transition:.25s;z-index:80;
+  pointer-events:none;box-shadow:0 8px 20px rgba(31,35,46,.4);max-width:calc(100vw - 40px)}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.toast.bad{background:#a3271f}
+
+/* ===== レスポンシブ ===== */
+@media(max-width:860px){
+  .shell{flex-direction:column}
+  .main{order:1;width:100%}
+  .side{order:2;width:100%;position:static;grid-template-columns:1fr 1fr;align-items:start}
+  .minicalpanel{grid-column:1/-1}
+  .sidelinks{grid-column:1/-1}
+  .mnav{display:inline-flex}
+  .datehead{gap:6px}
+  .datehead h2{font-size:15px}
+  .tabs{width:100%}
+  .tab{flex:1;justify-content:center;padding:8px 4px}
+  .tabbar{gap:4px;row-gap:6px;padding:0 6px 6px}
+  .chip{padding:4px 9px;font-size:11.5px}
+  :root{--slot:26px;--labelw:96px}
+  .rlabel span{font-size:14px;letter-spacing:-.01em;font-weight:800}
+  .tabbar{padding:0 6px}
+  .tab{padding:8px 12px;font-size:13px}
+  #newBtn{order:9;flex:1;text-align:center}
+  .overlay{padding:0;align-items:flex-end}
+  .modal{border-radius:10px 10px 0 0;max-height:94vh;width:100%}
+  .rcards{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  :root{--slot:20px;--labelw:72px}
+  .hcell{font-size:10px;padding-left:3px}
+  .blk{padding:2px 2px 2px 4px;border-left-width:3px}
+  .blk b{font-size:12px}
+  .blk span{display:none}
+  .boardcard{-webkit-overflow-scrolling:touch}
+  .mcgrid{padding:4px}
+  .mcd{font-size:11px;padding:3px 0;min-height:22px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav class="tabbar">
+  <div class="tabs">
+    <button class="tab on" data-view="list">一覧</button>
+    <button class="tab" data-view="item">アイテム別</button>
+    <button class="tab" data-view="month">カレンダー</button>
+  </div>
+  <span class="grow"></span>
+  <button class="chip demochip" id="demoChip" hidden title="タップするとデモのサンプル予約を消して通常表示に戻ります">デモ画面 ✕</button>
+  <button class="chip" id="syncChip" title="データ同期の設定を開く"><i class="cdot" id="syncDot"></i><span id="syncLabel">ローカル</span></button>
+  <button class="iconbtn" id="openSettings" title="設定" aria-label="設定"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  <button class="btn primary" id="newBtn">＋ 新規予約</button>
+</nav>
+
+<div class="memwarn" id="verWarn" hidden><div>⬆ 新しいバージョンの予約表が配布されています。この画面は古いバージョンです。ページを<b>再読込</b>（PC: Ctrl+F5 / スマホ: 再読込ボタン）するか、配布された<b>最新のURL</b>を開き直してください。予約データはクラウドから自動で引き継がれます。</div></div>
+
+<div class="memwarn" id="memWarn" hidden><div>⚠ このプレビュー画面ではデータ保存が制限されています。名前や設定を保存するには、HTMLファイルをダウンロードしてブラウザで直接開いてください。</div></div>
+
+<div class="shell">
+  <aside class="side">
+    <div class="panel minicalpanel">
+      <div class="mchead"><button id="mcPrev" aria-label="前の月">◀</button><b id="mcTitle"></b><button id="mcNext" aria-label="次の月">▶</button></div>
+      <div class="mcgrid" id="miniCal"></div>
+    </div>
+    <div class="dnav">
+      <button id="prevDay">◀ 前日</button>
+      <button id="todayBtn">本日</button>
+      <button id="nextDay">翌日 ▶</button>
+    </div>
+    <button class="guidebtn" id="guideBtn">かんたん操作ガイド</button>
+    <div class="sidelinks">
+      <button id="setLink">設定・データ同期を開く</button>
+      <button id="calLink">Googleカレンダー連携を開く</button>
+    </div>
+    <div class="panel qpanel">
+      <div class="mchead" style="justify-content:center">今日の一言</div>
+      <div class="qbody" id="qText"></div>
+      <div class="qauthor" id="qAuthor"></div>
+    </div>
+    <div class="panel vpanel">
+      <div class="mchead" style="justify-content:center">私たちのバリュー</div>
+      <div class="vlist" id="vList"></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="view on" data-view="list">
+      <div class="datehead">
+        <h2 id="dateTitle"></h2>
+        <span class="mnav"><button id="mPrev">◀</button><button id="mToday">本日</button><button id="mNext">▶</button></span>
+        <input type="date" id="datePick" aria-label="日付を指定">
+        <span class="stat" id="statLine"></span>
+      </div>
+      <div class="dayempty" id="dayEmpty" hidden>この日の予約はまだありません。タイムテーブルの空きマスをクリックして予約できます。</div>
+      <div class="boardcard"><div class="board" id="board"></div></div>
+      <p class="hint">空きマスをクリック（PCはドラッグで範囲選択）で予約登録 · 予約ブロックをクリックで詳細・変更・キャンセル
+        <span class="ver" id="verBadge" title="クリックで更新状況を確認">v<span id="verBadgeNum"></span></span></p>
+    </section>
+
+    <section class="view" data-view="item">
+      <div class="datehead"><h2>アイテム別の予定（<span id="itemStartLabel"></span>以降 1ヶ月）</h2>
+        <input type="date" id="itemStartPick" aria-label="表示する期間の開始日">
+        <button class="btn sm" id="itemToday">本日</button>
+        <span class="stat" id="itemStat"></span>
+      </div>
+      <div class="icards" id="itemView"></div>
+    </section>
+
+    <section class="view" data-view="month">
+      <div class="mfbar" id="mfBar"></div>
+      <div class="datehead"><h2 id="monthTitle"></h2><span class="stat">日をクリックすると一覧が開きます</span></div>
+      <div class="monthgrid" id="monthView"></div>
+    </section>
+  </main>
+</div>
+
+<!-- ===== 予約フォーム ===== -->
+<div class="overlay" id="formOverlay">
+  <div class="modal">
+    <div class="mhead"><h3 id="formTitle">新規予約</h3>
+      <button class="iconbtn" id="formClose" aria-label="閉じる"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="mbody">
+      <div class="err" id="formErr" hidden></div>
+      <div class="f"><span id="fMultiLabel">予約対象（複数選択で一斉登録）</span>
+        <div class="multisel" id="fMulti"></div>
+        <div class="srow" style="margin:6px 0 0">
+          <button class="btn sm ghost" id="fAll" type="button">全員選択</button>
+          <button class="btn sm ghost" id="fNone" type="button">選択解除</button>
+          <span class="statline" id="fMultiN"></span>
+        </div>
+      </div>
+      <label class="f"><span>利用日</span><input type="date" id="fDate"></label>
+      <div class="times">
+        <label class="f"><span>開始時間</span><input type="time" id="fStart" step="300"></label>
+        <span class="dash">〜</span>
+        <label class="f"><span>終了時間</span><input type="time" id="fEnd" step="300"></label>
+        <label class="f" style="flex:0 0 150px"><span>リマインド</span>
+          <select id="fRemind">
+            <option value="">なし</option>
+            <option value="10">10分前</option>
+            <option value="30">30分前</option>
+            <option value="60">1時間前</option>
+            <option value="1440">前日</option>
+          </select></label>
+      </div>
+      <div class="f"><span>種類（色分け）</span><div class="typesel" id="fType"></div></div>
+      <label class="f"><span>詳細・メモ（任意）</span><input id="fPurpose" placeholder="例：営業定例会議" maxlength="60"></label>
+    </div>
+    <div class="mfoot">
+      <button class="btn danger" id="fDelete" hidden>🗑 この予約を削除</button>
+      <span class="spacer"></span>
+      <button class="btn" id="fCancel">閉じる</button>
+      <button class="btn primary" id="fSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 予約詳細・削除 ===== -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal">
+    <div class="mhead"><h3>予約の詳細</h3>
+      <button class="iconbtn" id="dClose" aria-label="閉じる"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="mbody">
+      <table class="dtable"><tbody>
+        <tr><th>対象</th><td id="dRes"></td></tr>
+        <tr><th>日付</th><td id="dDate"></td></tr>
+        <tr><th>時間</th><td id="dTime"></td></tr>
+        <tr><th>種類</th><td><span class="dchip" id="dType"><i></i><span></span></span></td></tr>
+        <tr><th>リマインド</th><td id="dRem"></td></tr>
+        <tr><th>詳細</th><td id="dPurpose"></td></tr>
+      </tbody></table>
+    </div>
+    <div class="mfoot">
+      <button class="btn danger" id="dDelete">🗑 この予約を削除</button>
+      <span class="spacer"></span>
+      <button class="btn" id="dCancel">閉じる</button>
+      <button class="btn primary" id="dEdit">✎ 変更する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 設定 ===== -->
+<div class="overlay top" id="setOverlay">
+  <div class="modal wide">
+    <div class="mhead"><h3>設定</h3>
+      <button class="iconbtn" id="setClose" aria-label="閉じる"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="stabs">
+      <button class="stab on" data-tab="basic">基本</button>
+      <button class="stab" data-tab="sync">データ同期</button>
+      <button class="stab" data-tab="data">データ管理</button>
+    </div>
+    <div class="mbody">
+      <div class="pane on" data-pane="basic">
+        <label class="f" style="margin-top:8px"><span>自分の名前（登録する予約のタイトルの先頭に自動で付きます）</span><input id="sName" placeholder="例：相澤"></label>
+        <div class="srow" style="margin-top:-4px">
+          <button class="btn sm" id="ntfBtn" type="button">🔔 ブラウザ通知を許可する（リマインド用）</button>
+        </div>
+        <div class="note" style="margin-top:0">リマインドを設定した予約は、登録した人の端末にだけ時間帯バナーで表示されます。通知を許可すると、アプリを開いていなくても通知が届きます（ブラウザの仕様上、アプリを開いている間のみ）。</div>
+        <div class="seclabel">予約対象（会議室・備品・担当者など、1行につき1件）</div>
+        <div class="note" style="margin:0 0 8px">↓ 行を追加・編集したら、モーダル右下の<b style="color:#1a46d8">「設定を保存して閉じる」</b>で確定されます（×やEscでも保存されます）。</div>
+        <div id="resList"></div>
+        <button class="btn sm" id="resAdd">＋ 対象を追加</button>
+        <div class="seclabel" style="margin-top:14px">まとめて貼り付け（1行に1件。コピーしたリストをそのまま貼れます）</div>
+        <textarea id="bulkRows" rows="3" placeholder="会議室&#10;プラウド&#10;北村&#10;相澤&#10;橋口&#10;水谷&#10;岡本&#10;木村"></textarea>
+        <div class="srow" style="margin-top:8px">
+          <button class="btn sm" id="bulkAdd">現在の行に追加</button>
+          <button class="btn sm" id="bulkReplace">貼り付けた行に入れ替え</button>
+        </div>
+        <div class="note">変更は「設定を保存して閉じる」で保存されます。対象を削除すると、その対象の予約はボードに表示されなくなります。</div>
+      </div>
+
+      <div class="pane" data-pane="sync">
+        <div class="seclabel" style="margin-top:8px">予約データの同期モード</div>
+        <div class="rcards">
+          <div class="rcard on" data-mode="local"><b>ローカルのみ</b><small>この端末のブラウザに保存。すぐ使える</small></div>
+          <div class="rcard" data-mode="firebase"><b>Firebase</b><small>リアルタイム同期。スマホ・PCで即時共有</small></div>
+          <div class="rcard" data-mode="sheets"><b>Googleスプレッドシート</b><small>GAS連携。約10秒間隔で同期</small></div>
+        </div>
+
+        <div class="syncbox" id="fbBox" hidden>
+          <div class="seclabel" style="margin-top:0">Firebase Realtime Database</div>
+          <label class="f"><span>firebaseConfig（Webアプリ追加時に表示されるJSONを貼り付け）</span>
+            <textarea id="fbConfig" rows="5" placeholder='{
+  "apiKey": "AIza...",
+  "authDomain": "xxx.firebaseapp.com",
+  "databaseURL": "https://xxx-default-rtdb.firebaseio.com",
+  "projectId": "xxx"
+}'></textarea></label>
+          <button class="btn primary sm" id="fbConnect">接続する</button>
+          <div class="note"><b>設定手順：</b>① console.firebase.google.com でプロジェクト作成 → ② 「Realtime Database」を作成（テストモードでOK）→ ③ ルールタブに <code>{"rules":{".":{"read":true,"write":true}}}</code> を貼り替えて「公開」（テストモードは30日後に動かなくなるため、これで恒久化）→ ④ プロジェクト設定 →「マイアプリ」→ ウェブアプリ（&lt;/&gt;）を追加して firebaseConfig を取得 → ⑤ 貼り付けて「接続する」。<br><b>社員に設定させたくない場合：</b>⑤のconfigをこのHTML内の「CR_FB_PRESET」の行に貼った上で配布すれば、開くだけで自動接続されます。</div>
+        </div>
+
+        <div class="syncbox" id="shBox" hidden>
+          <div class="seclabel" style="margin-top:0">Googleスプレッドシート連携（Google Apps Script）</div>
+          <label class="f"><span>WebアプリURL（/exec で終わるURL）</span><input id="shUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
+          <button class="btn primary sm" id="shConnect">接続する</button>
+          <div class="seclabel">セットアップ手順（約5分）</div>
+          <ol class="steps">
+            <li>Googleスプレッドシートを新規作成（予約データの保存先になります）</li>
+            <li>メニュー「拡張機能」→「Apps Script」を開く</li>
+            <li>既存コードを消し、下のコードを全て貼り付けて保存</li>
+            <li>「デプロイ」→「新しいデプロイ」→ 種類：ウェブアプリ / 実行ユーザー：自分 / アクセスできるユーザー：全員</li>
+            <li>「デプロイ」→ 承認を実施 → 表示されたURL（…/exec）を上の欄に貼り付けて接続</li>
+            <li>カレンダー連携も使う場合：同じURLでOK。承認時にカレンダーへの権限を許可してください</li>
+            <li>以前のGASコードから更新する場合：コード貼り替え後、「デプロイ」→「デプロイを管理」→ 編集 →「新バージョン」→「デプロイ」（URLは変わりません）</li>
+          </ol>
+          <details>
+            <summary style="cursor:pointer;font-size:13px;font-weight:700">Apps Script コードを表示（クリックで展開）</summary>
+            <pre class="gas" id="gasCode"></pre>
+            <button class="btn sm" id="gasCopy">コードをコピー</button>
+          </details>
+          <div class="note"><b>共有範囲に注意：</b>「全員」はURLを知っている人全員が読み書きできる設定です。社内でURLを共有する範囲を限定してください。データはリンク先スプレッドシートの「reservations」シートに蓄積されます。</div>
+        </div>
+
+        <div class="srow" style="margin-top:12px">
+          <button class="btn sm" id="syncRetry">今すぐ再接続</button>
+          <button class="btn sm" id="pushAll">この端末のデータを同期先へアップロード</button>
+          <span class="statline" id="syncStat" style="margin-top:0"></span>
+        </div>
+        <div class="note"><b>接続できないときのチェックリスト（GAS側）：</b>① エディタに全コードを貼り済み・保存済み（doGetあり）　② 「デプロイ」→「デプロイを管理」→ 編集 →「新バージョン」で反映済み　③ 実行ユーザー「自分」／アクセスできるユーザー「全員」。この3点で約9割解決します。</div>
+        <div class="note">アップロードは同期先の予約一覧を、この端末のデータで置き換えます。同期先の予約はこの端末にも自動で取り込まれ、以後はどの端末・スマホでも同じ予約状況が表示されます。</div>
+
+        <div class="seclabel" style="margin-top:16px">Googleカレンダー連携</div>
+        <div class="srow">
+          <button class="btn sm" id="calToggle">カレンダー連携：無効</button>
+          <span class="statline" id="calState" style="margin-top:0">オフ</span>
+        </div>
+        <div id="calBox" hidden>
+          <label class="f"><span>GAS WebアプリURL（上のスプレッドシート連携と同じURLでOK）</span><input id="calUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
+          <label class="f"><span>カレンダーID（空欄 = 自分のメインカレンダー。会議室の共有カレンダーに反映する場合はそのカレンダーID）</span><input id="calId" placeholder="例：meeting-room-a@group.calendar.google.com"></label>
+          <label class="f"><span>連携する行（カンマ・読点区切り・部分一致。空欄 = すべての行）</span><input id="calRows" placeholder="例：相澤"></label>
+          <label class="f"><span>カレンダーの予定の取り込み（双方向にする場合のみ）</span>
+            <select id="calPullSel">
+              <option value="off">取り込まない（アプリ → カレンダーの一方向・おすすめ）</option>
+              <option value="on">取り込む（カレンダーの予定もアプリに表示・双方向）</option>
+            </select></label>
+          <div class="srow">
+            <button class="btn primary sm" id="calApply">設定を適用</button>
+            <button class="btn sm" id="calNow">今すぐカレンダーを取り込み</button>
+            <button class="btn sm" id="calBack">既存の予約をまとめてカレンダーへ送信</button>
+          </div>
+          <div class="note"><b>動作：</b>「連携する行」で指定した行の予約が、登録・変更・削除のたびにGAS経由でカレンダーへ自動反映されますさらに<b>GAS側が5分ごとに自動同期</b>するため、どの端末で変更・削除してもカレンダーの消し残り・反映漏れが自動で修正されます（セットアップの手順4「トリガー設定」が必須）。変更・削除は必ず<b>予定表から</b>行ってください（カレンダー直編集は反映されません）。取り込みを「取り込む」にするとカレンダー側の予定が約30秒間隔で「カレンダー取込」行に表示されます。個人用カレンダーへ反映する場合は「取り込まない」（一方向）がおすすめです。<b>「既存の予約をまとめてカレンダーへ送信」</b>は、連携設定より前に登録していた予約をカレンダーに入れたいときに使います（「連携する行」の条件に一致する分だけ送信・何度押しても二重登録されません）。GASスクリプトは<b>カレンダー専用版（納品ファイル）</b>を使用してください。</div>
+        </div>
+      </div>
+
+      <div class="pane" data-pane="data">
+        <div class="statline" style="margin-top:8px">アプリのバージョン: v<span id="verNum"></span>（この画面が古い場合、画面下部のバージョン表示が黄色く点滅します）</div>
+        <div class="seclabel" style="margin-top:8px">バックアップ</div>
+        <div class="srow">
+          <button class="btn sm" id="expBtn">JSONで書き出す</button>
+          <button class="btn sm" id="impBtn">JSONを読み込む</button>
+          <input type="file" id="impFile" accept=".json,application/json" hidden>
+        </div>
+        <div class="seclabel">デモ</div>
+        <div class="srow"><button class="btn sm" id="demoShow">デモ画面を表示（サンプル予約）</button></div>
+        <div class="note">操作方法を確認するためのサンプルを表示します（上部に「デモ画面」の表示が出ます）。解除は画面上部の「デモ画面 ✕」をタップ。全端末で共有する実データではデモを表示しないでください。</div>
+        <div class="seclabel">危険な操作</div>
+        <button class="btn sm danger" id="clrBtn">この端末の予約データを全て削除</button>
+        <div class="note">削除する前に「JSONで書き出す」でのバックアップを推奨します。</div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <span class="statline" id="setMsg"></span>
+      <span class="spacer"></span>
+      <button class="btn primary" id="setSave">設定を保存して閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 操作ガイド ===== -->
+<div class="overlay" id="guideOverlay">
+  <div class="modal">
+    <div class="mhead"><h3>かんたん操作ガイド</h3>
+      <button class="iconbtn" id="guideClose" aria-label="閉じる"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="mbody">
+      <div class="gitem"><b>予約を登録する</b><span>タイムテーブルの空きマスをクリック（PCはドラッグで範囲選択）→ 内容を入力 →「保存」。「＋ 新規予約」ボタンからでも登録できます。設定で自分の名前を登録しておくと、タイトルの先頭に自動で付きます（時間は5分単位で自由入力可）。</span></div>
+      <div class="gitem"><b>変更・キャンセルする</b><span>予約ブロック、または「アイテム別」タブの行をクリック → 編集するか「キャンセル（削除）」。</span></div>
+      <div class="gitem"><b>重複チェック</b><span>同じ対象・同じ時間帯の予約は、登録時にエラー表示されます。</span></div>
+      <div class="gitem"><b>色分けで登録</b><span>外出／ウェブ打合せ／来客／所内打合せ／休暇／事務所行事／出勤日／その他 の8種類から選ぶと、タイムテーブルが色で分かれます。</span></div>
+      <div class="gitem"><b>行（予約対象）を増やす</b><span>「設定」→「基本」で「＋ 対象を追加」、または名前のリストを「まとめて貼り付け」の欄に1行に1件ずつ貼り付けて一括作成できます。</span></div>
+      <div class="gitem"><b>日付を移動する</b><span>左のミニカレンダーや「前日／本日／翌日」で移動。上部タブ「カレンダー」で月間表示に切り替えられます。</span></div>
+      <div class="gitem"><b>スマホ・他のPCと共有する</b><span>「設定」→「データ同期」から Firebase または Googleスプレッドシートに接続すると、全端末で同じ予約状況が見られます。Googleカレンダーとの双方向同期も同じ画面で設定できます。</span></div>
+    </div>
+    <div class="mfoot"><span class="spacer"></span><button class="btn primary" id="guideOk">閉じる</button></div>
+  </div>
+</div>
+
+<div class="rembar" id="remBar" hidden>
+  <span class="remico">🔔</span>
+  <div class="remtxt"><b id="remTitle"></b><span id="remSub"></span></div>
+  <button class="btn sm" id="remDismiss">OK</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ================================================================
+   Re三郎 — 予約表
+   ローカル保存 + （設定で）Firebase / Googleスプレッドシート /
+   Googleカレンダー（双方向）同期
+================================================================ */
+
+/* ---------- 定数 ---------- */
+var SLOT_MIN = 30, OPEN_MIN = 7*60, CLOSE_MIN = 21*60;
+var SLOTS = (CLOSE_MIN - OPEN_MIN) / SLOT_MIN;
+var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1', uname:'cr.uname.v1', rd:'cr.remDismiss.v1' };
+var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
+/* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
+   新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
+   「新しいバージョンがあります」の警告が出ます。 */
+var APP_VERSION = 34;
+var TYPES = [
+  { n:'外出',        c:'#1a46d8' },
+  { n:'ウェブ打合せ', c:'#ea7317' },
+  { n:'来客',        c:'#7c3aed' },
+  { n:'所内打合せ',   c:'#0a8f72' },
+  { n:'休暇',        c:'#d0342c' },
+  { n:'事務所行事',   c:'#e0a800' },
+  { n:'出勤日',      c:'#8a8f9c' },
+  { n:'その他',      c:'#0891b2' }
+];
+var WD = ['日','月','火','水','木','金','土'];
+var TYPE_ICONS = { '外出':'🏃', '来客':'☕', '所内打合せ':'💬', 'ウェブ打合せ':'💻', '休暇':'🌴', '事務所行事':'🎉', '出勤日':'🗓️', 'その他':'📌' };
+function typeIcon(n){ return TYPE_ICONS[n] || '📌'; }
+var QUOTES = [["戦略とは、何をやらないかを決めることである。", "P・F・ドラッカー"],["今日という一日を、真剣に完璧に生きること。", "稲盛和夫"],["効率は正しく事をすること。効果は正しい事をすること。", "P・F・ドラッカー"],["心を尽くせば、道は開ける。", "稲盛和夫"],["未来を予測する最良の方法は、未来を創ることである。", "P・F・ドラッカー"],["学びて思わざれば、則ち罔し。思びて学ばざれば、則ち殆し。", "孔子"],["人生・仕事の結果＝考え方×熱意×能力。", "稲盛和夫"],["組織の目的は、平凡な人を非凡にすることである。", "P・F・ドラッカー"],["うまくいかないときこそ、素直に謙虚に。", "稲盛和夫"],["三人行けば、必ず我が師あり。", "孔子"],["素直な心になれば、ものごとはよく分かる。", "松下幸之助"],["イノベーションとは、変化を機会に変えることである。", "P・F・ドラッカー"],["己の欲せざる所、人に施す勿れ。", "孔子"],["挑戦なくして、革新なし。", "本田宗一郎"],["困難のなかにこそ、成長の種がある。", "稲盛和夫"],["千里の道も、一歩から。", "老子"],["まず、やってみる。考えながら、やってみる。", "本田宗一郎"],["シンプルに考えれば、本質が見えてくる。", "稲盛和夫"],["知識こそ、最大の資源である。", "P・F・ドラッカー"],["温故而知新。", "孔子"],["リスクとは、自分が何をしているのか分かっていないことだ。", "ウォーレン・バフェット"],["小さく生んで、大きく育てる。", "松下幸之助"],["時間は、買えない唯一の資源である。", "P・F・ドラッカー"],["経営とは、人を生かすことにほかならない。", "松下幸之助"],["論語と算盤は、両立する。", "渋沢栄一"],["過ちて改めざる、是を過ちと謂う。", "孔子"],["波乱万丈こそ、人生の醍醐味である。", "本田宗一郎"],["価格はあなたが払うもの。価値はあなたが得るもの。", "ウォーレン・バフェット"],["設備の近代化は、心の近代化から。", "土光敏夫"],["全力で生きる今日が、明日を創る。", "稲盛和夫"],["足るを知る者は、富む。", "老子"],["情熱があれば、方法は見つかる。", "永守重信"],["企業は、社会の公器である。", "松下幸之助"],["利益を追うだけでなく、道義にかなう商いを。", "渋沢栄一"],["過ぎたるは、猶及ばざるが如し。", "孔子"],["点と点は、あとでつながる。", "スティーブ・ジョブズ"],["気合いと根性は、最強の技術である。", "永守重信"],["人のやらないことをやれ。", "出光佐三"],["目標を高く持て。それが実力を引き上げる。", "稲盛和夫"],["リーダーとは、自らが率先して動く者だ。", "土光敏夫"],["強みに賭けよ。弱みは借り物に任せよ。", "P・F・ドラッカー"],["人に勝つ者は力なり。己に勝つ者は強なり。", "老子"],["自分の頭で考え、自分の足で歩け。", "本田宗一郎"],["一勝九敗でも、最後に勝てばいい。", "柳井正"],["人が貪欲なときは恐れよ。人が恐れるときは貪欲であれ。", "ウォーレン・バフェット"],["失敗を恐れず、挑戦し続けよ。", "柳井正"],["規模を誇らず、堅実を尊べ。", "岩崎弥太郎"],["ダム式経営。雨の日も、晴れの日もある。", "松下幸之助"],["良い事業に、長く乗っていればよい。", "ウォーレン・バフェット"],["幸せに生きる秘訣は、感謝である。", "稲盛和夫"],["我々が繰り返すことの集まりが、我々自身である。卓越とは習慣である。", "アリストテレス"],["顧客に執着せよ。競争相手ではなく。", "ジェフ・ベゾス"],["大器晩成。", "老子"],["徳は孤ならず、必ず隣あり。", "孔子"],["デザインとは、見た目ではなく仕組みである。", "スティーブ・ジョブズ"],["天は人の上に人を造らず、人の下に人を造らず。", "福沢諭吉"],["社員とは、家族である。", "出光佐三"],["行動のすべてに、誠実さを。", "渋沢栄一"],["技術は、人間のためにある。", "本田宗一郎"],["始める方法は、喋るのをやめて動き出すことだ。", "ウォルト・ディズニー"],["敬天愛人。", "西郷隆盛"],["捨てる決断なくして、始める決断なし。", "P・F・ドラッカー"],["会議は、立ちながらで行え。", "土光敏夫"],["あきらめた瞬間に、試合は終わる。", "永守重信"],["変化の速度より速く、自分たちを変えよ。", "ジャック・ウェルチ"],["夢を見るだけなら誰でもできる。実現させる勇気を持て。", "ウォルト・ディズニー"],["上善は、水の如し。", "老子"],["ハングリーであれ、愚かであれ。", "スティーブ・ジョブズ"],["失敗は、もっと巧みにやり直す機会である。", "ヘンリー・フォード"],["逆境こそ、伸びるチャンスである。", "永守重信"],["信頼は、日々の積み重ねでしか築けない。", "渋沢栄一"],["人を責めるより、己を責めよ。", "西郷隆盛"],["独立自尊。一に独立、二に独立、三に独立。", "福沢諭吉"],["愚直に、一歩ずつ積み上げよ。", "稲盛和夫"],["ブランドとは、あなたのいない場所で語られる評判である。", "ジェフ・ベゾス"],["之を知らざるを知らずと為す。是を知と為す。", "孔子"],["幸福とは、活動そのものである。", "アリストテレス"],["社内の和を以て、事業を進めよ。", "岩崎弥太郎"],["成功は悪い教師だ。賢い人間をミスから守ってくれるが、成長させてはくれない。", "ビル・ゲイツ"],["リーダーは、人の可能性を信じる者である。", "ジャック・ウェルチ"],["失敗はオプションだ。そこで学ばなければ、イノベーションは起こらない。", "イーロン・マスク"],["人間には、無限の可能性が眠っている。", "松下幸之助"],["成功の反対は、失敗ではなく何もしないことだ。", "柳井正"],["顧客こそ、事業の基礎である。", "P・F・ドラッカー"],["人を動かすには、まず自分が動け。", "土光敏夫"],["評判は20年かけて築き、5分で崩れる。", "ウォーレン・バフェット"],["お客様の立場に立ち、商いを磨け。", "出光佐三"],["独創を求めるなら、常識から離れよ。", "本田宗一郎"],["天分は、1%のひらめきと99%の努力である。", "トーマス・エジソン"],["同じことを繰り返しながら、違う結果を期待するのは狂気である。", "アルベルト・アインシュタイン"],["商才は、人徳に宿る。", "渋沢栄一"],["吾日、三たび吾が身を省みる。", "孔子"],["成功とは、意欲から意欲へと、情熱を失わずに歩むことである。", "ウィンストン・チャーチル"],["品質は、偶然では生まれない。", "ウォルト・ディズニー"],["安定ではなく、変革を続けよ。", "柳井正"],["チームワークとは、共通の目標に向かう信頼である。", "アンドリュー・カーネギー"],["始めることに、遅すぎることはない。", "ゲーテ"],["経営の極意は、最後は人の心にある。", "松下幸之助"],["人生は雪だるまだ。湿った雪と長い坂が必要だ。", "ウォーレン・バフェット"],["時間は限られている。他人の人生を生きるな。", "スティーブ・ジョブズ"],["命もいらぬ、名もいらぬ、官位も爵位もいらぬ。", "西郷隆盛"],["完璧にしてから出すな。出しながら磨け。", "マーク・ザッカーバーグ"],["顧客のためにすべてを始めよ。", "サム・ウォルトン"],["瀬戸際にこそ、覚悟が問われる。", "岩崎弥太郎"],["自分にできると信じれば、できる。それは正しい。", "ヘンリー・フォード"],["変化を恐れるな。変化こそ機会である。", "ビル・ゲイツ"],["やる気にさせてこそ、指導者である。", "永守重信"],["現場百遍。答えは現場にある。", "本田宗一郎"],["性格は、運命である。", "ヘラクレイトス"],["長期で考えれば、何でもできる。", "ジェフ・ベゾス"],["十分に失敗していないなら、革新も足りていない。", "イーロン・マスク"],["目的を持たぬ活動は、忙しさだけを生む。", "P・F・ドラッカー"],["売り手よし、買い手よし、世間よし。", "三井高利"],["読書は、学問の術なり。", "福沢諭吉"],["学びは、若いときの甘美な喜びであり、年老いてからの支えである。", "アリストテレス"],["現場に学び、現場で決めよ。", "出光佐三"],["幸運とは、準備が機会と出会ったときに起こるものだ。", "セネカ"],["日々、反省せよ。それが成長の燃料である。", "稲盛和夫"],["計画より、実行。実行の中で計画を直せ。", "土光敏夫"],["一番を守る最良の方法は、一番であり続けることである。", "ジャック・ウェルチ"],["図難は、その易きに於いて為す。", "老子"],["成功者の秘訣は、他人の立場に立つことである。", "アンドリュー・カーネギー"],["九層の台も、累土より起く。", "老子"],["成果は、外にしかない。", "P・F・ドラッカー"],["あせらず、おこらず、休まず。", "二宮尊徳"],["安く買うことこそ、最大の技術である。", "サム・ウォルトン"],["赤字でも、人を切るな。人こそ資本だ。", "出光佐三"],["学問は、世の中を良くするためにある。", "福沢諭吉"],["行き先のない船に、どんな風も順風ではない。", "セネカ"],["デキると思うから、デキるのだ。", "永守重信"],["常識を疑え。物理に反しない限り、可能である。", "イーロン・マスク"],["細かいことは気にするな。まず、やろう。", "リチャード・ブランソン"],["意志のあるところに、道は開ける。", "ゲーテ"],["思い込みを捨てよ。壁は頭の中にある。", "ヘンリー・フォード"],["変化・変革・冒険を、合言葉に。", "三木谷浩史"],["経営者の特権は、重い責任にある。", "土光敏夫"],["学びの根は苦い。しかし、その実は甘い。", "アリストテレス"],["知恵と工夫で、改善を続けよ。", "豊田喜一郎"],["変化を続けることが、成長である。", "ウォルト・ディズニー"],["うまくいかない方法を1万通り見つけただけだ。失敗ではない。", "トーマス・エジソン"],["100人の努力の1%は、自分の100%より大きい。", "ジョン・D・ロックフェラー"],["今日は残酷だ。明日はもっと残酷だ。だが明後日は美しい。", "ジャック・マー"],["鳴くまで、待とうホトトギス。", "徳川家康"],["夢は大きく。数字で語れる夢を持て。", "孫正義"],["素直とは、自分を素直に見直す力である。", "松下幸之助"],["問題をつくったのと同じ考え方では、問題は解けない。", "アルベルト・アインシュタイン"],["変革は、速さで決まる。", "ジャック・ウェルチ"],["千日の稽古を鍛とし、万日の稽古を錬とす。", "宮本武蔵"],["事業は、人才に始まり人才に終わる。", "岩崎弥太郎"],["一度して悔いぬことのないように、よく考えよ。", "西郷隆盛"],["時は金なり。", "ベンジャミン・フランクリン"],["内容が、王様である。", "ビル・ゲイツ"],["商人は、よろこばれるのが本業だ。", "伊藤雅俊"],["最大のリスクは、リスクを取らないことである。", "マーク・ザッカーバーグ"],["仕事は、与えられるものではなく、創るものだ。", "柳井正"],["自分の力を、最大限に発揮せよ。", "井深大"],["本当の強さは、謙虚さの中にある。", "本田宗一郎"],["善き思考を、善き行動に。", "稲盛和夫"],["富は、天下の公益に回せ。", "渋沢栄一"],["情熱だけが、偉大な仕事を生む。", "スティーブ・ジョブズ"],["商いは、まず信用から始まる。", "三井高利"],["他人の失敗から学べ。人生は短い。", "ウォーレン・バフェット"],["君子は、己を求む。小人は、人を求む。", "孔子"],["いいものは安く売る。安く売れば、よく売れる。", "小林一三"],["実験なくして、発明なし。", "ジェフ・ベゾス"],["万物は、流転する。", "ヘラクレイトス"],["健全な利益なくして、社会貢献なし。", "御手洗冨士夫"],["決して降りるな。決して、決して降りるな。", "ウィンストン・チャーチル"],["学ぶことに、遅すぎることはない。", "セネカ"],["ものづくりの原点は、現場にある。", "豊田喜一郎"],["チャンスは、仕事着を着て現れる。", "トーマス・エジソン"],["少にして学べば、則ち壮にして成る。", "佐藤一斎"],["勇気とは、圧力の下での優雅さである。", "ヘミングウェイ"],["敵を知り、己を知れば、百戦危うからず。", "孫子"],["理論は灰色だが、人生の樹は緑である。", "ゲーテ"],["若さは、年齢ではない。心の持ち方である。", "ウォルト・ディズニー"],["至誠にして動かざるものは、未だこれあらざるなり。", "二宮尊徳"],["義利一致。真の利益は、義から生まれる。", "渋沢栄一"],["安く売って、たくさん売る。", "中内㓓"],["考えることをやめるとき、人は老化する。", "本田宗一郎"],["顧客の不満は、宝の山である。", "ジェフ・ベゾス"],["悲観的な時代こそ、楽観的に動く好機である。", "ウィンストン・チャーチル"],["今日の良い方法が、明日には通用しない。", "鈴木敏文"],["人の一生は、重荷を負うて遠き路を行くが如し。", "徳川家康"],["唯一の不変は、変化である。", "ヘラクレイトス"],["準備なき者は、失敗を準備している。", "ベンジャミン・フランクリン"],["人の価値とは、得たものではなく、与えたもので決まる。", "アルベルト・アインシュタイン"],["経営とは、意思決定の連続である。", "柳井正"],["問題をはっきり書き表せば、半分は解決したも同然だ。", "C・F・ケタリング"],["自らが変わることから、世界は変わる。", "マハトマ・ガンジー"],["疾きこと風の如く、徐かなること林の如く。", "武田信玄"],["仕事に、大小はない。", "土光敏夫"],["合抱の木も、毫末の生ずるより生ず。", "老子"],["時機に遅れるな。先に読み、先に動け。", "福沢諭吉"],["斧を研ぐ時間を惜しむな。", "エイブラハム・リンカーン"],["ひらめきは、準備された心にしか訪れない。", "ルイ・パスツール"],["自由闊達にして、愉快な職場をつくれ。", "井深大"],["生活そのものを、提案せよ。", "小林一三"],["世界一を目指せ。国内一では足りない。", "永守重信"],["苦しみの中にも、意味はある。", "ヴィクトール・フランクル"],["スピードこそ、最大の武器である。", "孫正義"],["人は、一日に繰り返す思考の産物である。", "エマーソン"],["商いの原点は、人心を満たすことである。", "出光佐三"],["時間の使い方が、人生の使い方である。", "P・F・ドラッカー"],["小さな改善を、毎日積み上げよ。", "サム・ウォルトン"],["本質から考えよ。", "イーロン・マスク"],["三現主義。現場・現品・現実を見よ。", "大野耐一"],["速く動け。壊しながら学べ。", "マーク・ザッカーバーグ"],["最も大切なことを、最優先せよ。", "スティーブン・コヴィー"],["学ぶことに、年齢はない。", "ヘンリー・フォード"],["小銭を疎かにするな。商いの基本は足元にある。", "三井高利"],["笑顔は、千言万語に勝る。", "デール・カーネギー"],["1.01の累乗は、無限大に近づく。", "三木谷浩史"],["成功には多くの父がいるが、失敗は孤児である。", "ジョン・F・ケネディ"],["良いビジネスとは、簡単に理解できるものだ。", "ウォーレン・バフェット"],["節約の心が、富を育てる。", "ジョン・D・ロックフェラー"],["単純さは、究極の洗練である。", "レオナルド・ダ・ヴィンチ"],["お客様の気持ちを、中心に置け。", "伊藤雅俊"],["技術力こそ、最大の武器である。", "御手洗冨士夫"],["調子に乗るときこそ、謙虚であれ。", "ビル・ゲイツ"],["君子は和して同ぜず。小人は同ずるも和せず。", "孔子"],["神は、細部に宿る。", "ミース・ファン・デル・ローエ"],["人を育てる者が、会社を育てる。", "松下幸之助"],["小事を疎かにする者は、大事を成せない。", "岩崎弥太郎"],["困難を抱えた若者こそ、最強の起業家になる。", "ジャック・マー"],["焦点を定め、一つの道を極めよ。", "宮本武蔵"],["思考の始まりは、驚きである。", "アリストテレス"],["顧客の声に、常に耳を澄ませよ。", "リチャード・ブランソン"],["技術と教養の出会いに、本物の作品が生まれる。", "スティーブ・ジョブズ"],["心が変われば、行動が変わる。人格が変われば、運命が変わる。", "稲盛和夫"],["明日できることは、今日するな。そうすれば一番早く終わる。", "マーク・トウェイン"],["率直さは、最良の経営方針である。", "ジャック・ウェルチ"],["確たる信念は、暴風雨にも揺るがない。", "西郷隆盛"],["市場調査だけでは、革新的製品は生まれない。", "盛田昭夫"],["熱意こそ、最大の資産である。", "アンドリュー・カーネギー"],["世界を、もう一度洗い直したい。", "坂本龍馬"],["顧客は、常に正しい。", "マーシャル・フィールド"],["逆境の日々こそ、未来の糧である。", "孫正義"],["お客様は、神様である。", "三波春夫"],["「危機」という言葉には、危険と機会の両方が含まれている。", "ジョン・F・ケネディ"],["巨人的肩の上に立つことで、私は遠くを見た。", "ニュートン"],["マーケティングとは、需要を創造することである。", "フィリップ・コトラー"],["人は破壊され得る。敗けることはある。だが、打ちのめされることはない。", "ヘミングウェイ"],["才能を育てるのは、努力である。", "ゲーテ"],["変化を常とし、挑戦を誇りとせよ。", "柳井正"],["改善に、終わりはない。", "豊田喜一郎"],["戦わずして勝つは、善の善なるものなり。", "孫子"],["大きな夢こそが、最良の道標である。", "マーク・ザッカーバーグ"],["在庫は、悪である。欲しい時に、必要な分だけ。", "大野耐一"],["私たちは偉大なことはできない。しかし、小さなことを偉大な愛でできる。", "マザー・テレサ"],["礼儀は、商売の第一歩である。", "出光佐三"],["仕事とは、天から与えられた最良の修行である。", "稲盛和夫"],["生き残るのは、最強の種ではない。変化に適応できる種である。", "ダーウィン"],["問題は、着物を着た機会である。", "ヘンリー・カイザー"],["最初のルールは損をしないこと。二番目のルールは、最初のルールを忘れないこと。", "ウォーレン・バフェット"],["経営者は、なによりも先見の明を持て。", "松永安左エ門"],["それでも、地球は動いている。", "ガリレオ・ガリレイ"],["従業員を、パートナーとして扱え。", "サム・ウォルトン"],["英雄とは、自らの意志で生きる者である。", "ロマン・ロラン"],["明日ありと思う心の仇桜。", "山岡鉄舟"],["運命は、自ら掴むものだ。", "ベートーヴェン"],["変化の兆しを見逃すな。", "伊藤雅俊"],["目は、耳よりも確かな証人である。", "ヘラクレイトス"],["やるべきことを、できることを、今すぐやれ。", "セオドア・ルーズベルト"],["私は探しているのではない。見つけているのだ。", "ピカソ"],["人は、信じた通りの人間になる。", "ノーマン・ヴィンセント・ピール"],["美は、あらゆるところにある。見抜く目を持て。", "ロダン"],["科学に国境はない。だが、科学者には祖国がある。", "ルイ・パスツール"],["頭上の星空と、心中の道徳律。", "カント"],["変化から目を背けるな。前提を疑え。", "鈴木敏文"],["雨の日には、雨の中を。風の日には、風の中を。", "松尾芭蕉"],["客の心に、店あり。", "三井高利"],["人が成長するのは、強みを活かすときである。", "P・F・ドラッカー"],["人生の意味は、状況ではなく、その対応の仕方にある。", "ヴィクトール・フランクル"],["東洋道徳、西洋芸術。", "佐久間象山"],["少ないことは、豊かなことである。", "ミース・ファン・デル・ローエ"],["われ思う。ゆえに、われあり。", "デカルト"],["人生は、クローズアップでは悲劇。ロングショットでは喜劇である。", "チャップリン"],["終わりではない。続ける勇気こそが大事である。", "ウィンストン・チャーチル"],["人生は、学びの連続である。老いて学べば、朽ちず。", "佐藤一斎"],["準備をしておけば、機会は必ず来る。", "セルバンテス"],["日々の鍛錬を、欠かすな。", "宮本武蔵"],["良い会社から偉大な会社へ。その鍵は規律である。", "ジム・コリンズ"],["知者は惑わず、勇者は恐れず。", "孔子"],["小さな節約は、大きな富を生む。", "ベンジャミン・フランクリン"],["現場を歩け。数字より現物だ。", "土光敏夫"],["才能は的を射る。天才は的を射て、さらに別の的も射る。", "ショーペンハウアー"],["実行速度が、最大の差になる。", "イーロン・マスク"],["自分の直感を信じよ。それは既に何かを知っている。", "スティーブ・ジョブズ"],["科学の進歩は、失敗の積み重ねである。", "C・F・ケタリング"],["生命は、長さではなく使い方で決まる。", "セネカ"],["我を殺さざるものは、我を強くする。", "ニーチェ"],["打たないシュートは、100%決まらない。", "ウェイン・グレツキー"],["事を成すは、誠にあり。", "西郷隆盛"],["恩恵は、回り回って自分に返る。善の循環を。", "吉田忠雄"],["人の名前を覚えよ。それはその人に最も甘い響きだ。", "デール・カーネギー"],["完璧は、善の敵である。", "ヴォルテール"],["最初に無視され、次に嘲笑され、そして戦われ、最後に勝つ。", "マハトマ・ガンジー"],["偉大な栄光とは、倒れないことではない。倒れるたびに立ち上がることである。", "ネルソン・マンデラ"],["顧客の節約が、我々の存在意義である。", "中内㓓"],["鳴かぬなら、鳴かせてみようホトトギス。", "豊臣秀吉"],["リーダーシップとは、影響力である。", "ジョン・C・マクスウェル"],["一期一会。", "千利休"],["大事を成す者は、小事を積む者なり。", "坂本龍馬"],["知行合一。", "王陽明"],["視力のあるところにビジョンがないのは、盲目よりも恐ろしい。", "ヘレン・ケラー"],["始まりは、仕事の最も重要な部分である。", "プラトン"],["知者は言わず。言う者は知らず。", "老子"],["勝利は、試合の前に決まっている。", "モハメド・アリ"],["教育とは、人格を完成させることである。", "福沢諭吉"],["百聞は、一見に如かず。", "班固"],["学び続ける者だけが、生き残る。", "ビル・ゲイツ"],["9000本以上のシュートを外してきた。失敗こそが、私を成功させた。", "マイケル・ジョーダン"],["需要は、作り出せるものだ。", "小林一三"],["まず理解し、それから理解されよ。", "スティーブン・コヴィー"],["人は城、人は石垣、人は堀。", "武田信玄"],["他人の長所を見つけ、それを言葉にせよ。", "アンドリュー・カーネギー"],["データと感性、両輪で判断せよ。", "三木谷浩史"],["想像力こそ、知識より大切である。", "アルベルト・アインシュタイン"],["品質は、設計で決まる。検査では生まれない。", "エドワード・デミング"],["人間は、考える葦である。", "パスカル"],["人の心を燃やせ。それがリーダーの仕事だ。", "ジャック・ウェルチ"],["人間は、社会に生きる動物である。", "アリストテレス"],["恩を、行動で返せ。それが報徳である。", "二宮尊徳"],["鳴かぬなら、殺してしまえホトトギス。", "織田信長"],["健康は、最大の富である。", "エマーソン"],["静かな実行は、大きな声より雄弁である。", "エイブラハム・リンカーン"],["努力あるところに、実あり。", "野口英世"],["勝って、兜の緒を締めよ。", "東郷平八郎"],["本質は、心で見なくては見えない。", "サン＝テグジュペリ"],["為せば成る、為さねば成らぬ、何事も。", "上杉鷹山"],["もし初版に恥じらいがなければ、リリースが遅すぎたのだ。", "リード・ホフマン"],["昨日より今日。今日より明日。", "ジャック・マー"],["富の価値は、使い方で決まる。", "ジョン・D・ロックフェラー"],["誰もやったことのないものを、つくれ。", "井深大"],["夢を見ることができれば、それは実現できる。", "ウォルト・ディズニー"],["人生の勝ち負けは、勤勉で決まる。", "本多静六"],["やってみせ、言って聞かせて、させてみせ、ほめてやらねば、人は動かじ。", "山本五十六"],["打たない者は、永遠にホームランを打てない。", "ベーブ・ルース"],["発明は、忍耐の産物である。", "トーマス・エジソン"],["勇気とは、恐怖に逆らって立ち上がる抵抗である。", "マーク・トウェイン"],["速く失敗し、速く学べ。", "ジェフ・ベゾス"],["人に先んずること、世に先んずること。", "野村徳七"],["仕事を楽しければ、人生は天国である。つまらなければ、地獄である。", "マルコム・フォーブス"],["現場の声が、経営の羅針盤である。", "御手洗冨士夫"],["和を以て貴しとなす。", "聖徳太子"],["細部を疎かにするな。細部が完成をつくる。", "レオナルド・ダ・ヴィンチ"],["成功への鍵は、明確な目標にある。", "ナポレオン・ヒル"],["商売は、世の中を良くする奉仕である。", "松下幸之助"],["最大の危険は、目標が高すぎることではない。低すぎて達成できてしまうことだ。", "ミケランジェロ"],["失敗を責めるな。次に生かせ。", "本田宗一郎"],["規律なくして、繁栄なし。", "岩崎弥太郎"],["青春とは、心の若さである。", "サムエル・ウルマン"],["奉仕の心が、事業の根である。", "ヘンリー・フォード"],["管理とは、最後までやり切ることである。", "永守重信"],["従業員を第一に考えよ。そうすれば顧客は二番目に付かない。", "リチャード・ブランソン"],["人はあなたの言葉を忘れる。しかし、与えた気持ちだけは忘れない。", "マヤ・アンジェロウ"],["成功者は、必ず成功すると思う。そう思い続けたから成功するのだ。", "中村天風"],["商人之道は、正直を本とす。", "石田梅岩"],["信用は、一日にして成らず。", "渋沢栄一"],["継続に勝るものはない。才能も、教育も、それを代替できない。", "レイ・クロック"],["人生は、舞台である。各自は、演じるべき役を持つ。", "シェイクスピア"],["技術は、世界を幸せにするためにある。", "盛田昭夫"],["自分の無知を知ることから、すべてが始まる。", "ソクラテス"],["己を御するは、天下を御するの始めなり。", "徳川家康"],["寧静にして、遠くに致る。", "諸葛孔明"]];
+function typeColor(n){ for(var i=0;i<TYPES.length;i++) if(TYPES[i].n===n) return TYPES[i].c; return '#9aa1b4'; }
+
+/* ★★★ 配布用プリセット（社員に配る前にここだけ編集）★★★
+   Firebaseの firebaseConfig を1行で貼ると、このファイルを開いた人は
+   何も設定しなくても自動で接続されます。
+   例: var CR_FB_PRESET = {"apiKey":"AIza...","authDomain":"xxx.firebaseapp.com","databaseURL":"https://xxx-default-rtdb.firebaseio.com","projectId":"xxx"};
+   社員配布は「この1行にconfigを貼ったHTML」を送るだけです。 */
+var CR_FB_PRESET = {"apiKey":"AIzaSyA1Hz7AmLAdqKO7uZdpB1JAVnenyaHHF3Y","authDomain":"cleanreserve-cd29a.firebaseapp.com","databaseURL":"https://cleanreserve-cd29a-default-rtdb.firebaseio.com","projectId":"cleanreserve-cd29a","storageBucket":"cleanreserve-cd29a.firebasestorage.app","messagingSenderId":"387779264264","appId":"1:387779264264:web:846623d8527ededde776bd"};
+
+/* ---------- 安全なストレージ ---------- */
+var storeIsMemory = false;
+var store = (function(){
+  try { localStorage.setItem('__cr_t','1'); localStorage.removeItem('__cr_t'); return localStorage; }
+  catch(e){
+    storeIsMemory = true;
+    var m = {};
+    return { getItem:function(k){ return (k in m) ? m[k] : null; },
+             setItem:function(k,v){ m[k]=String(v); },
+             removeItem:function(k){ delete m[k]; } };
+  }
+})();
+
+/* ---------- 状態 ---------- */
+var state = {
+  date: todayStr(),
+  reservations: [],
+  resources: [],
+  calEvents: [],
+  sync: { mode:'local', firebaseConfig:null, sheetsUrl:'', calendar:{ enabled:false, url:'', calendarId:'', rows:['相澤'], pull:false } }
+};
+var editing = null, pickedType = '所内打合せ', currentView = 'list', demo = false, itemStartDate = null, username = '';
+
+/* ---------- ユーティリティ ---------- */
+function pad(n){ return String(n).padStart(2,'0'); }
+function toMin(s){ var p=String(s).split(':'); return (+p[0])*60 + (+p[1]); }
+function hm(m){ return pad(Math.floor(m/60)) + ':' + pad(m%60); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function nowMin(){ var d=new Date(); return d.getHours()*60 + d.getMinutes(); }
+function isToday(s){ return s === todayStr(); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function parts(s){ var p=s.split('-'); return { y:+p[0], m:+p[1], d:+p[2] }; }
+function dowOf(s){ var p=parts(s); return new Date(p.y,p.m-1,p.d).getDay(); }
+function jpDate(s){ var p=parts(s); return p.m+'/'+p.d+'（'+WD[dowOf(s)]+'）'; }
+function jpDateFull(s){ var p=parts(s); return p.y+'年'+p.m+'月'+p.d+'日（'+WD[dowOf(s)]+'）'; }
+function addDays(s,n){ var p=parts(s), dt=new Date(p.y,p.m-1,p.d+n);
+  return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate()); }
+function addMonths(s,n){ var p=parts(s), dt=new Date(p.y,p.m-1+n,1);
+  var day=Math.min(p.d, new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate());
+  dt.setDate(day);
+  return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate()); }
+function monthKey(s){ return s.slice(0,7); }
+function resById(id){ for(var i=0;i<state.resources.length;i++) if(state.resources[i].id===id) return state.resources[i]; return null; }
+function resName(id){ var r=resById(id); return r?r.name:''; }
+function byId(id){ for(var i=0;i<state.reservations.length;i++) if(state.reservations[i].id===id) return state.reservations[i]; return null; }
+function isFuture(x){ return x.date > todayStr() || (x.date === todayStr() && toMin(x.end) > nowMin()); }
+function toast(msg,bad){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(bad?' bad':'');
+  clearTimeout(t._h); t._h=setTimeout(function(){ t.className='toast'; }, 2600);
+}
+
+/* ---------- 祝日（日本の国民の祝日を自動計算・振替休日込み） ---------- */
+var _holCache = {};
+function holidayMap(y){
+  if(_holCache[y]) return _holCache[y];
+  var H={};
+  function add(m,d,name){ H[y+'-'+pad(m)+'-'+pad(d)]=name; }
+  function nthDow(m,dow,n){ var d1=new Date(y,m-1,1); var off=(dow-d1.getDay()+7)%7; return 1+off+(n-1)*7; }
+  add(1,1,'元日');
+  add(1,nthDow(1,1,2),'成人の日');
+  add(2,11,'建国記念の日');
+  add(2,23,'天皇誕生日');
+  add(3, Math.floor(20.8431+0.242194*(y-1980))-Math.floor((y-1980)/4), '春分の日');
+  add(4,29,'昭和の日');
+  add(5,3,'憲法記念日'); add(5,4,'みどりの日'); add(5,5,'こどもの日');
+  add(7,nthDow(7,1,3),'海の日');
+  add(8,11,'山の日');
+  add(9,nthDow(9,1,3),'敬老の日');
+  add(9, Math.floor(23.2488+0.242194*(y-1980))-Math.floor((y-1980)/4), '秋分の日');
+  add(10,nthDow(10,1,2),'スポーツの日');
+  add(11,3,'文化の日');
+  add(11,23,'勤労感謝の日');
+  Object.keys(H).sort().forEach(function(k){
+    var q=k.split('-'); var d=new Date(+q[0],+q[1]-1,+q[2]);
+    if(d.getDay()!==0) return;
+    var nx=addDays(k,1), i=0;
+    while(H[nx] && i<7){ nx=addDays(nx,1); i++; }
+    H[nx]='振替休日';
+  });
+  _holCache[y]=H;
+  return H;
+}
+function holidayName(ds){ var q=parts(ds); return holidayMap(q.y)[ds] || ''; }
+
+/* ---------- 永続化 ---------- */
+function persistRes(){ store.setItem(LS.res, JSON.stringify(state.reservations)); }
+function persistCal(){ store.setItem(LS.cal, JSON.stringify(state.calEvents)); }
+function persistAll(){
+  persistRes(); persistCal();
+  store.setItem(LS.reso, JSON.stringify(state.resources));
+  store.setItem(LS.sync, JSON.stringify(state.sync));
+  store.setItem(LS.demo, demo ? '1' : '0');
+  store.setItem(LS.uname, username || '');
+}
+function loadState(){
+  try{ state.reservations = JSON.parse(store.getItem(LS.res)||'[]')||[]; }catch(e){ state.reservations=[]; }
+  try{ state.resources = JSON.parse(store.getItem(LS.reso)||'null')||[]; }catch(e){ state.resources=[]; }
+  try{ state.calEvents = JSON.parse(store.getItem(LS.cal)||'[]')||[]; }catch(e){ state.calEvents=[]; }
+  try{ demo = store.getItem(LS.demo)==='1'; }catch(e){ demo=false; }
+  try{ username = store.getItem(LS.uname)||''; }catch(e){ username=''; }
+  try{ var s=JSON.parse(store.getItem(LS.sync)||'null'); if(s&&s.mode) state.sync=s; }catch(e){}
+  if(state.sync.calendar) state.sync.calendar = Object.assign({ enabled:false, url:'', calendarId:'', rows:['相澤'], pull:false }, state.sync.calendar);
+  if(!state.sync.calendar) state.sync.calendar={ enabled:false, url:'', calendarId:'' };
+  if(!state.sync.firebaseConfig && typeof CR_FB_PRESET!=='undefined' && CR_FB_PRESET){
+    state.sync={ mode:'firebase', firebaseConfig:CR_FB_PRESET, sheetsUrl:state.sync.sheetsUrl, calendar:state.sync.calendar };
+  }
+  if(!Array.isArray(state.resources) || !state.resources.length){
+    state.resources = [
+      { id:'r1', name:'会議室',  color:RES_COLORS[0] },
+      { id:'r2', name:'プラウド', color:RES_COLORS[1] },
+      { id:'r3', name:'北村',    color:RES_COLORS[2] },
+      { id:'r4', name:'相澤',    color:RES_COLORS[3] }
+    ];
+  }else{
+    /* 旧デフォルト行（会議室A など）を新しい行名へ自動更新 */
+    var OLD_DEF = { r1:'会議室A', r2:'会議室B', r3:'応接室', r4:'プロジェクター' };
+    var NEW_DEF = { r1:'会議室', r2:'プラウド', r3:'北村', r4:'相澤' };
+    if(state.resources.length===4 && state.resources.every(function(r){ return OLD_DEF[r.id]===r.name; })){
+      state.resources = state.resources.map(function(r){
+        return { id:r.id, name:NEW_DEF[r.id], color:RES_COLORS[Number(r.id.slice(1))-1] };
+      });
+    }
+  }
+  if(!Array.isArray(state.reservations)) state.reservations = [];
+  if(!Array.isArray(state.calEvents)) state.calEvents = [];
+  document.documentElement.style.setProperty('--hours', String((CLOSE_MIN-OPEN_MIN)/60));
+  document.documentElement.style.setProperty('--slots', String(SLOTS));
+}
+
+/* ---------- 重複チェック ---------- */
+function findConflict(r, excludeId){
+  for(var i=0;i<state.reservations.length;i++){
+    var x = state.reservations[i];
+    if(x.id === excludeId) continue;
+    if(x.date===r.date && x.resourceId===r.resourceId &&
+       toMin(x.start) < toMin(r.end) && toMin(r.start) < toMin(x.end)) return x;
+  }
+  return null;
+}
+
+/* ---------- サンプルデータ ---------- */
+function seedDemo(){
+  var d = state.date;
+  function mk(id,rid,start,end,type,purpose){
+    return { id:id, date:d, resourceId:rid, resourceName:resName(rid), start:start, end:end,
+             user:'', type:type, purpose:purpose, createdAt:Date.now(), updatedAt:Date.now(), demo:true };
+  }
+  state.reservations = [
+    mk('d1','r1','14:00','18:00','所内打合せ','営業定例会議'),
+    mk('d2','r1','14:00','15:00','来客','面接（採用）'),
+    mk('d3','r1','18:00','19:00','事務所行事','月例会'),
+    mk('d4','r2','09:30','11:00','外出','打合せ録音（持ち出し）'),
+    mk('d5','r2','16:00','17:00','ウェブ打合せ','オンライン商談'),
+    mk('d6','r3','09:00','18:00','休暇','有給休暇'),
+    mk('d7','r4','09:00','10:30','来客','税務相談'),
+    mk('d8','r4','11:00','12:00','外出','税務署訪問'),
+    mk('d9','r4','14:00','17:00','所内打合せ','年末調整準備')
+  ];
+  state.reservations[0].by='佐藤';
+  state.reservations[0].remind=600;
+  demo = true;
+  persistAll(); renderAll(); updateDemoChip();
+  toast('デモ画面を表示しました（解除は上部「デモ画面 ✕」）');
+}
+
+function clearDemo(){
+  state.reservations = state.reservations.filter(function(x){ return !(x.demo || /^d\d+$/.test(String(x.id))); });
+  demo = false;
+  persistAll(); renderAll(); updateDemoChip();
+  toast('デモを終了しました（サンプルの予約を削除）');
+}
+
+function updateDemoChip(){
+  var c=document.getElementById('demoChip');
+  if(c) c.hidden = !demo;
+}
+
+/* ---------- 描画：共通 ---------- */
+function renderAll(){ renderMeta(); renderBoard(); renderMiniCal(); renderItemView(); renderMonthView(); renderValues(); checkReminders(); }
+
+var VALUES = [
+  { n:'アンテナ',  d:'情報を敏感に拾う', c:'#1a46d8' },
+  { n:'レスポンス', d:'すぐ返す、すぐ動く', c:'#ea7317' },
+  { n:'会話',     d:'率直に、丁寧に', c:'#0a8f72' },
+  { n:'成長',     d:'昨日の自分を超える', c:'#7c3aed' },
+  { n:'信頼',     d:'約束を守り続ける', c:'#d0342c' },
+  { n:'挑戦',     d:'失敗を恐れない', c:'#e0a800' },
+  { n:'遊び心',   d:'楽しさも仕事のうち', c:'#0891b2' }
+];
+var REM_LABEL = { 10:'10分前', 30:'30分前', 60:'1時間前', 1440:'前日' };
+function dtOf(x, hmStr){ var p=parts(x.date), t=toMin(hmStr); return new Date(p.y, p.m-1, p.d, Math.floor(t/60), t%60); }
+function remDismissed(){ try{ return JSON.parse(store.getItem(LS.rd)||'{}')||{}; }catch(e){ return {}; } }
+function remMark(k){ var d=remDismissed(); d[k]=1; try{ store.setItem(LS.rd, JSON.stringify(d)); }catch(e){} }
+function checkReminders(){
+  if(!username) return;
+  var now=Date.now(), dis=remDismissed(), due=null;
+  for(var i=0;i<state.reservations.length && !due;i++){
+    var x=state.reservations[i];
+    if(!x.remind || x.by!==username) continue;
+    var key=x.id+'_'+x.remind;
+    if(dis[key]) continue;
+    var t0=dtOf(x, x.start).getTime() - Number(x.remind)*60000;
+    var t1=dtOf(x, x.end).getTime();
+    if(now>=t0 && now<=t1){ due=x; due._key=key; }
+    else if(now>t1){ remMark(key); }
+  }
+  var bar=document.getElementById('remBar');
+  if(!bar) return;
+  if(due){
+    document.getElementById('remTitle').textContent = (due.type||'その他')+' '+due.start+'〜'+due.end+' '+due.resourceName;
+    document.getElementById('remSub').textContent = jpDateFull(due.date) + (due.purpose ? '　'+due.purpose : '');
+    bar.hidden=false; bar.setAttribute('data-key', due._key);
+    if(window.Notification && Notification.permission==='granted'){
+      try{ new Notification('まもなく: '+(due.type||'その他'), { body: due.start+'〜'+due.end+' '+due.resourceName }); }catch(e){}
+    }
+  } else { bar.hidden=true; }
+}
+function renderValues(){
+  var box=document.getElementById('vList');
+  if(!box) return;
+  var h='';
+  VALUES.forEach(function(v){
+    h += '<div class="vitem" style="--vc:'+v.c+'"><i></i><b>'+esc(v.n)+'</b><span>'+esc(v.d)+'</span></div>';
+  });
+  box.innerHTML=h;
+}
+function renderQuote(){
+  var q = parts(state.date);
+  var doy = Math.floor((new Date(q.y, q.m-1, q.d) - new Date(q.y, 0, 0)) / 86400000);
+  var sel = QUOTES[(doy - 1) % QUOTES.length];
+  var t = document.getElementById('qText'), a = document.getElementById('qAuthor');
+  if(t) t.textContent = sel[0];
+  if(a) a.textContent = sel[1];
+}
+
+function renderMeta(){
+  var hn0 = holidayName(state.date);
+  document.getElementById('dateTitle').textContent = jpDateFull(state.date) + (hn0 ? ' 【'+hn0+'】' : '');
+  renderQuote();
+  document.getElementById('datePick').value = state.date;
+  var n = state.reservations.filter(function(x){ return x.date===state.date; }).length;
+  document.getElementById('statLine').textContent = n + '件の予約';
+  document.getElementById('dayEmpty') && (document.getElementById('dayEmpty').hidden = n !== 0);
+  updateDemoChip();
+  renderBoard();
+}
+
+/* ---------- 描画：タイムテーブル ---------- */
+function renderBoard(){
+  var b = document.getElementById('board');
+  if(!state.resources.length){
+    b.innerHTML = '<div class="nores">予約対象がありません。「設定 → 基本」から会議室や備品を追加してください。</div>';
+    return;
+  }
+  var today = isToday(state.date);
+  var now = today ? nowMin() : null;
+
+  var h = '<div class="hrow"><div class="corner">時間 / 対象</div><div class="hcells">';
+  for(var m=OPEN_MIN; m<CLOSE_MIN; m+=60) h += '<div class="hcell">'+hm(m)+'</div>';
+  h += '</div></div>';
+
+  var rows = state.resources.slice();
+  if(state.calEvents.length) rows.push({ id:'__cal__', name:'カレンダー取込', color:'#565b68' });
+
+  for(var ri=0; ri<rows.length; ri++){
+    var r = rows[ri];
+    var isCal = (r.id==='__cal__');
+    var day = isCal
+      ? state.calEvents.filter(function(x){ return x.date===state.date; })
+      : state.reservations.filter(function(x){ return x.date===state.date && x.resourceId===r.id; });
+    var blks = '';
+    for(var i=0;i<day.length;i++){
+      var x = day[i];
+      var s = toMin(x.start), e = toMin(x.end);
+      if(e<=OPEN_MIN || s>=CLOSE_MIN) continue;
+      var l = Math.max(0,(s-OPEN_MIN))/SLOT_MIN;
+      var w = Math.max(1,(Math.min(e,CLOSE_MIN)-Math.max(s,OPEN_MIN))/SLOT_MIN);
+      var label = isCal ? (x.summary||'(無題)') : (x.type||'その他')+' '+typeIcon(x.type);
+      var sub   = isCal ? (x.calName||'カレンダー') : (x.purpose||'');
+      blks += '<div class="blk'+(isCal?' calblk':'')+(isFuture(x)?'':' past')+'"'
+           +  (isCal?' data-cal="1"':' data-id="'+esc(x.id)+'"')
+           +  ' style="--c:'+(isCal?'#565b68':typeColor(x.type))+';left:'+(l/SLOTS*100)+'%;width:calc('+(w/SLOTS*100)+'% - 3px)"'
+           +  ' title="'+esc(label)+'　'+esc(x.start)+'〜'+esc(x.end)+(sub?'　'+esc(sub):'')+'">'
+           +  '<b>'+esc(label)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</div>';
+    }
+    var nl = (now!==null && now>OPEN_MIN && now<CLOSE_MIN && !isCal)
+      ? '<div class="nowline" style="left:'+((now-OPEN_MIN)/(CLOSE_MIN-OPEN_MIN)*100)+'%"></div>' : '';
+    var calOn = calActive() && (state.sync.calendar.rows||[]).some(function(n){
+      n = String(n).trim(); return n && String(r.name).indexOf(n) >= 0; });
+    h += '<div class="row"><div class="rlabel">'
+      +  '<div class="nrow"><span>'+esc(r.name)+'</span>'
+      +  (calOn ? '<u class="calon" title="この行の予約はGoogleカレンダーに自動反映されます">同期中</u>' : '')
+      +  '</div></div>'
+      +  '<div class="track"'+(isCal?'':' data-rid="'+esc(r.id)+'"')+'>'+blks+nl+'</div></div>';
+  }
+  b.innerHTML = h;
+
+  if(now!==null && now>OPEN_MIN && now<CLOSE_MIN){
+    var hc = b.querySelector('.hcells');
+    if(hc){
+      var dot = document.createElement('div');
+      dot.className='nowdot';
+      dot.style.left = ((now-OPEN_MIN)/(CLOSE_MIN-OPEN_MIN)*100)+'%';
+      hc.appendChild(dot);
+    }
+  }
+  fitBoard();
+}
+
+/* 行数に合わせて行の高さを自動圧縮し、ボード全体を1画面に収める */
+function fitBoard(){
+  var b=document.getElementById('board');
+  var card=b.closest?b.closest('.boardcard'):null;
+  if(!card) return;
+  var rows=state.resources.length + (state.calEvents.length?1:0);
+  if(!rows) return;
+  var top=card.getBoundingClientRect().top;
+  var hint=document.querySelector('.hint');
+  var hintH=(hint && currentView==='list')?hint.offsetHeight+12:0;
+  var avail;
+  var side=document.querySelector('.side');
+  var bp=Number('860');
+  if(side && window.innerWidth>bp && currentView==='list'){
+    /* 左パネル（私たちのバリュー）の下端に、ボードの下端を合わせる */
+    var sb=side.getBoundingClientRect().bottom;
+    var hr=card.querySelector('.hrow');
+    var hrH=hr?hr.offsetHeight:30;
+    avail=sb-top-hintH-hrH-10;
+  }else{
+    avail=window.innerHeight-top-hintH-6;
+  }
+  if(avail<160) avail=160;
+  var h=Math.floor(avail/rows);
+  if(h>150) h=150;
+  if(h<26) h=26;
+  b.style.setProperty('--rowh', h+'px');
+}
+
+/* ---------- 描画：ミニカレンダー ---------- */
+function renderMiniCal(){
+  var p = parts(state.date);
+  document.getElementById('mcTitle').textContent = p.y+'年'+p.m+'月';
+  var first = new Date(p.y, p.m-1, 1);
+  var start = new Date(p.y, p.m-1, 1 - first.getDay());
+  var counts = {};
+  state.reservations.forEach(function(x){ counts[x.date]=(counts[x.date]||0)+1; });
+  var daysInMonth = new Date(p.y, p.m, 0).getDate();
+  var weeks = Math.ceil((first.getDay() + daysInMonth) / 7);
+  var h='';
+  for(var w=0; w<7; w++) h += '<div class="mcw'+(w===0?' sun':w===6?' sat':'')+'">'+WD[w]+'</div>';
+  for(var i=0;i<weeks*7;i++){
+    var dt = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i);
+    var ds = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+    var hn = holidayName(ds);
+    var cls = 'mcd';
+    if(dt.getMonth()!==p.m-1) cls+=' out';
+    if(dt.getDay()===0 || hn) cls+=' sun'; else if(dt.getDay()===6) cls+=' sat';
+    if(ds===state.date) cls+=' cur';
+    var tip=[]; if(counts[ds]) tip.push(counts[ds]+'件の予約'); if(hn) tip.push(hn);
+    h += '<button class="'+cls+'" data-date="'+ds+'"'+(tip.length?' title="'+esc(tip.join(' / '))+'"':'')+'>'+dt.getDate()+
+         (counts[ds]?'<i></i>':'')+'</button>';
+  }
+  document.getElementById('miniCal').innerHTML = h;
+}
+
+/* ---------- 描画：アイテム別 ---------- */
+function renderItemView(){
+  var box = document.getElementById('itemView');
+  if(!itemStartDate) itemStartDate = state.date;
+  var endD = addDays(itemStartDate, 30);
+  var list = state.reservations.filter(function(x){ return x.date>=itemStartDate && x.date<=endD; })
+    .sort(function(a,b){ return a.date===b.date ? toMin(a.start)-toMin(b.start) : (a.date<b.date?-1:1); });
+  document.getElementById('itemStartLabel').textContent = jpDate(itemStartDate);
+  document.getElementById('itemStartPick').value = itemStartDate;
+  document.getElementById('itemStat').textContent = '期間内 '+list.length+'件';
+  var h='';
+  state.resources.forEach(function(r){
+    var rl = list.filter(function(x){ return x.resourceId===r.id; });
+    h += '<div class="icard"><h3 style="background:'+r.color+'">'+esc(r.name)+'<small style="font-weight:700">'+rl.length+'件</small></h3>';
+    if(!rl.length){ h += '<div class="none">'+jpDate(itemStartDate)+'以降1ヶ月の予定はありません</div>'; }
+    else{
+      h += '<ul>';
+      rl.forEach(function(x){
+        var hol = holidayName(x.date);
+        h += '<li class="'+(isFuture(x)?'':'past')+'" data-id="'+esc(x.id)+'">'
+          +  '<span class="t"'+(hol?' style="color:var(--sun)"':'')+'>'+jpDate(x.date)+'</span>'
+          +  '<span class="t2">'+esc(x.start)+'〜'+esc(x.end)+'</span>'
+          +  '<span class="u" style="color:'+typeColor(x.type)+'" title="'+esc(x.type||'その他')+'">'+typeIcon(x.type)+'</span>'
+          +  '<span class="p">'+esc(x.purpose||'')+'</span></li>';
+      });
+      h += '</ul>';
+    }
+    h += '</div>';
+  });
+  box.innerHTML = h;
+  Array.prototype.forEach.call(box.querySelectorAll('li[data-id]'), function(li){
+    li.addEventListener('click', function(){ openDetail(li.getAttribute('data-id')); });
+  });
+}
+
+/* ---------- 描画：カレンダー月間 ---------- */
+function renderMonthView(){
+  var p = parts(state.date);
+  document.getElementById('monthTitle').textContent = p.y+'年'+p.m+'月';
+  var first = new Date(p.y, p.m-1, 1);
+  var start = new Date(p.y, p.m-1, 1 - first.getDay());
+  var daysInMonth = new Date(p.y, p.m, 0).getDate();
+  var weeks = Math.ceil((first.getDay() + daysInMonth) / 7);
+  var byDate = {};
+  var mf = state.monthFilter || '';
+  state.reservations.forEach(function(x){
+    if(mf && x.resourceId !== mf) return;
+    (byDate[x.date]=byDate[x.date]||[]).push(x);
+  });
+  var bar = document.getElementById('mfBar');
+  if(bar){
+    var bh = '<button class="mfchip'+(mf?'':' on')+'" data-mf="">全員</button>';
+    state.resources.forEach(function(r){
+      bh += '<button class="mfchip'+(mf===r.id?' on':'')+'" data-mf="'+esc(r.id)+'"'+(calActive()&&(state.sync.calendar.rows||[]).some(function(n){n=String(n).trim();return n&&String(r.name).indexOf(n)>=0;})?' title="Googleカレンダー同期中の行"':'')+'>'+esc(r.name)+'</button>';
+    });
+    bar.innerHTML = bh;
+  }
+  var h='';
+  for(var w=0; w<7; w++) h += '<div class="mgw'+(w===0?' sun':w===6?' sat':'')+'">'+WD[w]+'</div>';
+  for(var i=0;i<weeks*7;i++){
+    var dt = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i);
+    var ds = dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+    var list = byDate[ds]||[];
+    var cls='mgc';
+    if(dt.getMonth()!==p.m-1) cls+=' out';
+    if(ds===todayStr()) cls+=' today';
+    var hn2 = holidayName(ds);
+    h += '<div class="'+cls+'" data-date="'+ds+'"><b'+(dt.getDay()===0||hn2?' style="color:var(--sun)"':dt.getDay()===6?' style="color:var(--sat)"':'')+'>'+dt.getDate()+'</b>'+
+         (hn2?'<span class="hol">'+esc(hn2)+'</span>':'')+
+         (list.length?'<span class="cnt">'+list.length+'</span>':'');
+    list.slice(0,3).forEach(function(x){
+      h += '<div class="pv">'+hm(toMin(x.start))+' '+typeIcon(x.type)+(x.purpose?'『'+esc(x.purpose.slice(0,10))+'』':'')+'</div>';
+    });
+    if(list.length>3) h += '<div class="pv">ほか'+(list.length-3)+'件</div>';
+    h += '</div>';
+  }
+  document.getElementById('monthView').innerHTML = h;
+}
+
+/* ---------- ビュー切替 ---------- */
+function switchView(name){
+  currentView = name;
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(t){
+    t.classList.toggle('on', t.getAttribute('data-view')===name); });
+  Array.prototype.forEach.call(document.querySelectorAll('.view'), function(v){
+    v.classList.toggle('on', v.getAttribute('data-view')===name); });
+  if(name==='list') requestAnimationFrame(fitBoard);
+  if(name==='item'){ itemStartDate = state.date; renderItemView(); }
+}
+
+/* ---------- ボード操作（ドラッグ選択 / タップ） ---------- */
+var drag=null, suppressClick=false;
+function slotFromEvent(e, track){
+  var rect = track.getBoundingClientRect();
+  var s = Math.floor((e.clientX - rect.left) / rect.width * SLOTS);
+  return Math.max(0, Math.min(SLOTS-1, s));
+}
+function showSel(){
+  var el = drag.track.querySelector('.sel');
+  if(!el){ el=document.createElement('div'); el.className='sel'; drag.track.appendChild(el); }
+  var s0=Math.min(drag.s0,drag.s1), s1=Math.max(drag.s0,drag.s1);
+  el.style.left=(s0/SLOTS*100)+'%';
+  el.style.width=((s1-s0+1)/SLOTS*100)+'%';
+}
+function hideSel(){ var a=document.querySelectorAll('.sel'); for(var i=0;i<a.length;i++) a[i].remove(); }
+
+function bindBoard(){
+  var board = document.getElementById('board');
+  board.addEventListener('pointerdown', function(e){
+    var track = e.target.closest('.track');
+    if(!track || e.target.closest('.blk') || !track.getAttribute('data-rid')) return;
+    if(e.pointerType && e.pointerType !== 'mouse') return;
+    e.preventDefault();
+    var s = slotFromEvent(e, track);
+    drag = { track:track, s0:s, s1:s };
+    try{ track.setPointerCapture(e.pointerId); }catch(_){}
+    showSel();
+  });
+  board.addEventListener('pointermove', function(e){
+    if(!drag) return;
+    var s = slotFromEvent(e, drag.track);
+    if(s!==drag.s1){ drag.s1=s; showSel(); }
+  });
+  board.addEventListener('pointerup', function(e){
+    if(!drag) return;
+    var d=drag; drag=null; hideSel();
+    suppressClick = true; setTimeout(function(){ suppressClick=false; }, 60);
+    var s0=Math.min(d.s0,d.s1), s1=Math.max(d.s0,d.s1);
+    var extra = (s0===s1) ? SLOT_MIN : 0;
+    openForm({ mode:'new', resourceId:d.track.getAttribute('data-rid'),
+      startMin: OPEN_MIN + s0*SLOT_MIN,
+      endMin: Math.min(CLOSE_MIN, OPEN_MIN + (s1+1)*SLOT_MIN + extra) });
+  });
+  board.addEventListener('pointercancel', function(){ drag=null; hideSel(); });
+  board.addEventListener('click', function(e){
+    if(suppressClick) return;
+    var blk = e.target.closest('.blk');
+    if(blk){
+      if(blk.getAttribute('data-cal')){ toast('カレンダーから取り込んだ予定です（アプリ内では編集できません）'); return; }
+      openDetail(blk.getAttribute('data-id')); return;
+    }
+    var track = e.target.closest('.track');
+    if(!track || !track.getAttribute('data-rid')) return;
+    var s = slotFromEvent(e, track);
+    openForm({ mode:'new', resourceId:track.getAttribute('data-rid'),
+      startMin: OPEN_MIN + s*SLOT_MIN,
+      endMin: Math.min(CLOSE_MIN, OPEN_MIN + (s+2)*SLOT_MIN) });
+  });
+}
+
+/* ---------- 予約フォーム ---------- */
+function timeOpts(fromMin, toMin, sel){
+  var s='';
+  for(var m=fromMin; m<=toMin; m+=SLOT_MIN)
+    s += '<option value="'+hm(m)+'"'+(m===sel?' selected':'')+'>'+hm(m)+'</option>';
+  return s;
+}
+function openForm(opt){
+  editing = (opt.mode==='edit') ? byId(opt.id) : null;
+  pickedType = editing ? (editing.type||'その他') : '所内打合せ';
+
+  document.getElementById('formErr').hidden = true;
+  document.getElementById('formTitle').textContent = editing ? '予約の変更' : '新規予約';
+
+  document.getElementById('fMultiLabel').textContent = editing ? '予約対象（変更する場合は選び直し）' : '予約対象（複数選択で一斉登録）';
+  buildMultiList(editing ? [editing.resourceId] : (opt.resourceId ? [opt.resourceId] : [state.resources[0] && state.resources[0].id]), !!editing);
+  var startMin, endMin, dateV, rid;
+  if(editing){
+    rid = editing.resourceId; dateV = editing.date;
+    startMin = toMin(editing.start); endMin = toMin(editing.end);
+    document.getElementById('fPurpose').value = editing.purpose;
+  }else{
+    rid = opt.resourceId || (state.resources[0]&&state.resources[0].id) || '';
+    dateV = state.date;
+    startMin = (opt.startMin!=null) ? opt.startMin : 600;
+    endMin = (opt.endMin!=null) ? opt.endMin : 660;
+    document.getElementById('fPurpose').value = '';
+  }
+  document.getElementById('fDate').value = dateV;
+  document.getElementById('fStart').value = hm(startMin);
+  document.getElementById('fEnd').value = hm(endMin);
+  document.getElementById('fRemind').value = editing ? (editing.remind ? String(editing.remind) : '') : '30';
+  buildTypeChips();
+
+  document.getElementById('formOverlay').classList.add('show');
+  if(!editing) document.getElementById('fPurpose').focus();
+}
+function buildMultiList(preIds, single){
+  var box=document.getElementById('fMulti'); box.innerHTML='';
+  state.resources.forEach(function(r){
+    var lab=document.createElement('label');
+    var cb=document.createElement('input'); cb.type='checkbox'; cb.value=r.id;
+    if(preIds && preIds.indexOf(r.id)>=0) cb.checked=true;
+    cb.addEventListener('change', function(){
+      if(single && cb.checked){
+        Array.prototype.forEach.call(box.querySelectorAll('input'), function(x){ if(x!==cb) x.checked=false; });
+      }
+      updateMultiN(); });
+    var i=document.createElement('i'); i.style.background=r.color||'#1a46d8';
+    lab.appendChild(cb); lab.appendChild(i);
+    lab.appendChild(document.createTextNode(r.name));
+    box.appendChild(lab);
+  });
+  updateMultiN();
+}
+function buildTypeChips(){
+  var box=document.getElementById('fType'); box.innerHTML='';
+  TYPES.forEach(function(t){
+    var b=document.createElement('button'); b.type='button';
+    b.className='tchip'+(t.n===pickedType?' on':'');
+    b.innerHTML='<i style="background:'+t.c+'"></i>'+esc(t.n)+' '+typeIcon(t.n);
+    b.addEventListener('click',function(){ pickedType=t.n; buildTypeChips(); });
+    box.appendChild(b);
+  });
+}
+function closeForm(){ document.getElementById('formOverlay').classList.remove('show'); editing=null; }
+
+function openGuide(){ document.getElementById('guideOverlay').classList.add('show'); }
+
+var detailId = null;
+function openDetail(id){
+  var x = byId(id);
+  if(!x){ toast('予約が見つかりません（すでに削除された可能性）', true); renderAll(); return; }
+  detailId = id;
+  document.getElementById('dRes').textContent = x.resourceName || resName(x.resourceId) || '-';
+  var hnd = holidayName(x.date);
+  document.getElementById('dDate').textContent = jpDateFull(x.date) + (hnd ? ' 【'+hnd+'】' : '');
+  document.getElementById('dTime').textContent = x.start + '〜' + x.end;
+  var chip = document.getElementById('dType');
+  chip.querySelector('i').style.background = typeColor(x.type);
+  chip.querySelector('span').textContent = (x.type || 'その他') + ' ' + typeIcon(x.type);
+  document.getElementById('dRem').textContent = REM_LABEL[Number(x.remind)] || 'なし';
+  document.getElementById('dPurpose').textContent = x.purpose || '（記入なし）';
+  document.getElementById('detailOverlay').classList.add('show');
+}
+function closeDetail(){ document.getElementById('detailOverlay').classList.remove('show'); detailId = null; }
+
+function showFormErr(msg){
+  var e = document.getElementById('formErr');
+  e.textContent = msg; e.hidden = false;
+}
+document.getElementById('fStart').addEventListener('change', function(){
+  if(!this.value || !document.getElementById('fEnd').value) return;
+  var st=toMin(this.value), en=toMin(document.getElementById('fEnd').value);
+  if(en<=st) document.getElementById('fEnd').value = hm(Math.min(CLOSE_MIN, st+SLOT_MIN));
+});
+function getMultiSel(){ 
+  var out=[];
+  Array.prototype.forEach.call(document.querySelectorAll('#fMulti input:checked'), function(cb){
+    out.push(cb.value); });
+  return out;
+}
+document.getElementById('fSave').addEventListener('click', function(){
+  var sel = getMultiSel();
+  if(!sel.length){ showFormErr('予約対象を1つ以上選んでください。'); return; }
+  var date = document.getElementById('fDate').value;
+  var start = document.getElementById('fStart').value;
+  var end = document.getElementById('fEnd').value;
+  if(!date){ showFormErr('利用日を選択してください。'); return; }
+  if(!start || !end){ showFormErr('開始時間と終了時間を入力してください。'); return; }
+  if(toMin(end) <= toMin(start)){ showFormErr('終了時間は開始時間より後にしてください。'); return; }
+  var remindV = document.getElementById('fRemind').value ? Number(document.getElementById('fRemind').value) : null;
+  if(editing){
+    var r = {
+      id: editing.id, date:date, resourceId:sel[0], resourceName:resName(sel[0]),
+      start:start, end:end, user:'', type:pickedType,
+      purpose: document.getElementById('fPurpose').value.trim(),
+      by: editing.by || username,
+      remind: remindV,
+      createdAt: editing.createdAt, updatedAt: Date.now()
+    };
+    var c = findConflict(r, editing.id);
+    if(c){ showFormErr('この時間帯はすでに予約が入っています（'+c.start+'〜'+c.end+' / '+(c.type||'その他')+' / '+(c.purpose||'')+'）'); return; }
+    closeForm(); toast('予約を更新しました'); syncUpdate(r);
+    return;
+  }
+  /* 新規：重複を全件チェックしてから、まとめて一括登録（部分登録なし） */
+  var recs=[], dup=[];
+  var prefix = username ? ('〔'+username+'〕') : '';
+  sel.forEach(function(rid){
+    var r = { id:uid(), date:date, resourceId:rid, resourceName:resName(rid),
+      start:start, end:end, user:'', type:pickedType,
+      purpose: prefix + document.getElementById('fPurpose').value.trim(),
+      by: username,
+      remind: remindV,
+      createdAt:Date.now(), updatedAt:Date.now() };
+    var c = findConflict(r, null);
+    if(c){ dup.push(resName(rid)+'（'+c.start+'〜'+c.end+'）'); return; }
+    recs.push(r);
+  });
+  closeForm();
+  recs.forEach(function(r){ syncAdd(r); });
+  if(dup.length){ toast(recs.length+'件を登録・重複のため未登録: '+dup.join('、'), true); }
+  else { toast(recs.length>=2 ? (recs.length+'件の対象に一括登録しました') : '予約を登録しました'); }
+});
+document.getElementById('fAll').addEventListener('click', function(){
+  Array.prototype.forEach.call(document.querySelectorAll('#fMulti input'), function(cb){ cb.checked=true; });
+  updateMultiN();
+});
+document.getElementById('fNone').addEventListener('click', function(){
+  Array.prototype.forEach.call(document.querySelectorAll('#fMulti input'), function(cb){ cb.checked=false; });
+  updateMultiN();
+});
+function updateMultiN(){
+  var n=getMultiSel().length;
+  document.getElementById('fMultiN').textContent = n ? (n+'行選択中') : '';
+}
+document.getElementById('fDelete').addEventListener('click', function(){
+  if(!editing) return;
+  var x = editing;
+  if(!confirm('この予約を削除しますか？（カレンダーからも自動で消えます）')) return;
+  closeForm();
+  syncRemove(x.id);
+  toast('予約を削除しました');
+});
+  document.getElementById('ntfBtn').addEventListener('click', function(){
+    if(!window.Notification){ toast('このブラウザは通知に対応していません', true); return; }
+    Notification.requestPermission().then(function(p){
+      toast(p==='granted' ? '通知を許可しました' : '通知は許可されませんでした', p!=='granted');
+    });
+  });
+  document.getElementById('remDismiss').addEventListener('click', function(){
+    var k=document.getElementById('remBar').getAttribute('data-key');
+    if(k) remMark(k);
+    document.getElementById('remBar').hidden=true;
+  });
+  document.getElementById('dClose').addEventListener('click', closeDetail);
+  document.getElementById('dCancel').addEventListener('click', closeDetail);
+  document.getElementById('detailOverlay').addEventListener('click', function(e){
+    if(e.target===this) closeDetail(); });
+  document.getElementById('dDelete').addEventListener('click', function(){
+    var x = byId(detailId);
+    if(!x) return;
+    var info = (x.type||'その他')+' '+x.start+'〜'+x.end;
+    closeDetail();
+    syncRemove(x.id);
+    toast('予約を削除しました（'+info+'）');
+  });
+  document.getElementById('dEdit').addEventListener('click', function(){
+    var id = detailId;
+    closeDetail();
+    if(id) openForm({ mode:'edit', id:id });
+  });
+document.getElementById('formClose').addEventListener('click', closeForm);
+document.getElementById('fCancel').addEventListener('click', closeForm);
+document.getElementById('formOverlay').addEventListener('click', function(e){
+  if(e.target===this) closeForm(); });
+
+/* ---------- 設定 ---------- */
+function openSettings(tab){
+  document.getElementById('sName').value = username;
+  buildResEditor();
+  document.getElementById('fbConfig').value = state.sync.firebaseConfig ? JSON.stringify(state.sync.firebaseConfig, null, 2) : '';
+  document.getElementById('shUrl').value = state.sync.sheetsUrl || '';
+  document.getElementById('calUrl').value = state.sync.calendar.url || state.sync.sheetsUrl || '';
+  document.getElementById('calId').value = state.sync.calendar.calendarId || '';
+  document.getElementById('calRows').value = (state.sync.calendar.rows || []).join('、');
+  document.getElementById('calPullSel').value = state.sync.calendar.pull ? 'on' : 'off';
+  updateCalToggle(); updateCalState();
+  pickSyncMode(state.sync.mode);
+  Array.prototype.forEach.call(document.querySelectorAll('.stab'), function(t){
+    t.classList.toggle('on', tab ? t.getAttribute('data-tab')===tab : t.getAttribute('data-tab')==='basic'); });
+  Array.prototype.forEach.call(document.querySelectorAll('.pane'), function(p){
+    var on = tab ? p.getAttribute('data-pane')===tab : p.getAttribute('data-pane')==='basic';
+    p.classList.toggle('on', on); });
+  document.getElementById('setMsg').textContent='';
+  document.getElementById('setOverlay').classList.add('show');
+}
+function closeSettings(){
+  var names=[];
+  Array.prototype.forEach.call(document.querySelectorAll('#resList input'), function(inp){
+    var v=inp.value.trim(); if(v) names.push({ id: inp.getAttribute('data-rid'), name:v, color: inp.getAttribute('data-color') || RES_COLORS[0] }); });
+  state.resources = names.length ? names : state.resources;
+  username = document.getElementById('sName').value.trim();
+  persistAll(); renderAll();
+  if(state.sync.mode==='firebase' && fb.ref && fbResRef){
+    fbResRef.set(state.resources);
+  }
+  document.getElementById('setOverlay').classList.remove('show');
+  return names.length;
+}
+function buildResEditor(){
+  var box = document.getElementById('resList'); box.innerHTML='';
+  state.resources.forEach(function(r){ box.appendChild(resRow(r)); });
+}
+function resRow(r){
+  var d=document.createElement('div'); d.className='srow';
+  var i=document.createElement('i');
+  i.style.cssText='width:10px;height:10px;border-radius:2px;flex:none;background:'+(r.color||RES_COLORS[0]);
+  var inp=document.createElement('input');
+  inp.value=r.name||''; inp.setAttribute('data-rid', r.id||('r'+uid()));
+  inp.setAttribute('data-color', r.color||RES_COLORS[0]); inp.placeholder='例：橋口 / ノートPC';
+  var b=document.createElement('button'); b.className='btn sm danger'; b.textContent='削除'; b.type='button';
+  b.addEventListener('click', function(){ d.remove(); });
+  d.appendChild(i); d.appendChild(inp); d.appendChild(b);
+  return d;
+}
+function pickSyncMode(mode){
+  Array.prototype.forEach.call(document.querySelectorAll('.rcard'), function(c){
+    c.classList.toggle('on', c.getAttribute('data-mode')===mode); });
+  document.getElementById('fbBox').hidden = mode!=='firebase';
+  document.getElementById('shBox').hidden = mode!=='sheets';
+  document.getElementById('setOverlay').setAttribute('data-pick', mode);
+}
+
+/* ---------- 同期エンジン（予約データ） ---------- */
+var fb = { ref:null };
+var sheetsTimer=null, calTimer=null, retryTimer=null;
+var chain = Promise.resolve();
+function enqueue(fn){
+  chain = chain.then(fn).catch(function(e){
+    setSync('err', e && e.message || '通信エラー');
+    if(state.sync.mode==='sheets' && state.sync.sheetsUrl && !retryTimer){
+      retryTimer=setTimeout(function(){ retryTimer=null; sheetsPoll(); }, 20000);
+    }
+  });
+  return chain;
+}
+
+function setSync(kind, msg){
+  var dot=document.getElementById('syncDot'), lab=document.getElementById('syncLabel');
+  dot.className='cdot';
+  if(kind==='ok'){
+    lab.textContent = state.sync.mode==='firebase' ? 'Firebase同期' : state.sync.mode==='sheets' ? 'シート同期' : 'ローカル保存';
+    if(calActive()) lab.textContent += '+カレンダー';
+  }
+  else if(kind==='busy'){ lab.textContent='同期中…'; dot.className='cdot busy'; }
+  else if(kind==='err'){ lab.textContent='同期エラー'; dot.className='cdot err'; }
+  document.getElementById('syncStat').textContent = msg ? ('状態: '+msg) : '';
+  document.getElementById('syncChip').title = 'データ同期の設定を開く' + (msg ? '（'+msg+'）' : '');
+}
+var fbResRef=null;
+function teardownRemote(){
+  if(fbResRef){ try{ fbResRef.off(); }catch(e){} fbResRef=null; }
+  if(fb.ref){ try{ fb.ref.off(); }catch(e){} fb.ref=null; }
+  try{ if(window.firebase && firebase.apps && firebase.apps.length) firebase.app().delete(); }catch(e){}
+  if(sheetsTimer){ clearInterval(sheetsTimer); sheetsTimer=null; }
+  if(calTimer){ clearInterval(calTimer); calTimer=null; }
+  if(retryTimer){ clearTimeout(retryTimer); retryTimer=null; }
+}
+function applyRemote(list){
+  state.reservations = (list||[]).filter(function(x){ return x && x.id && x.date; }).map(function(x){
+    return { id:String(x.id), date:String(x.date), resourceId:String(x.resourceId||''),
+             resourceName:String(x.resourceName||''), start:String(x.start||'09:00'), end:String(x.end||'10:00'),
+             user:String(x.user||''), type:String(x.type||''), purpose:String(x.purpose||''),
+             by:String(x.by||''),
+             remind:(x.remind!=null && x.remind!=='' && !isNaN(Number(x.remind))) ? Number(x.remind) : null,
+             createdAt:Number(x.createdAt)||0, updatedAt:Number(x.updatedAt)||0 };
+  });
+  persistRes(); renderAll();
+}
+function applyEvents(list){
+  state.calEvents = (list||[]).filter(function(x){ return x && x.date; }).map(function(x){
+    return { id:String(x.id||uid()), date:String(x.date),
+             start:String(x.start||'09:00'), end:String(x.end||'10:00'),
+             summary:String(x.summary||'(無題)'), calName:String(x.calName||'カレンダー') };
+  });
+  persistCal();
+}
+
+/* --- Firebase --- */
+function loadScript(src){
+  return new Promise(function(res,rej){
+    var s=document.createElement('script'); s.src=src;
+    s.onload=res; s.onerror=function(){ rej(new Error('SDKの読み込みに失敗しました')); };
+    document.head.appendChild(s);
+  });
+}
+function parseFbConfig(txt){
+  var a=txt.indexOf('{'), b=txt.lastIndexOf('}');
+  if(a<0||b<=a) throw new Error('firebaseConfig（JSON）が見つかりません');
+  var j=txt.slice(a,b+1)
+    .replace(/([{,]\s*)([A-Za-z0-9_]+)\s*:/g, '$1"$2":')
+    .replace(/'/g,'"');
+  var cfg=JSON.parse(j);
+  if(!cfg.databaseURL) throw new Error('databaseURL がありません（Realtime Database のURL）');
+  return cfg;
+}
+function connectFirebase(cfg){
+  teardownRemote();
+  setSync('busy','Firebaseに接続中…');
+  return loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js')
+    .then(function(){ return loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js'); })
+    .then(function(){
+      if(firebase.apps && firebase.apps.length) return firebase.app().delete();
+    })
+    .then(function(){
+      firebase.initializeApp(cfg);
+      fb.ref = firebase.database().ref('reservations');
+      /* 行（予約対象）もクラウド共有：誰かが保存すると全端末に反映 */
+      fbResRef = firebase.database().ref('meta/resources');
+      fbResRef.on('value', function(snap){
+        var v = snap.val();
+        if (Array.isArray(v) && v.length){
+          state.resources = v.map(function(r){
+            return { id:String(r.id), name:String(r.name), color:String(r.color||'#1a46d8') }; });
+          store.setItem(LS.reso, JSON.stringify(state.resources));
+          renderAll();
+        } else if (state.resources.length){
+          fbResRef.set(state.resources);
+        }
+      });
+      /* バージョン同期：新しいファイルが繋がるとクラウドの番号が上がり、古い端末に警告を出す */
+      var verRef = firebase.database().ref('meta/appVersion');
+      verRef.on('value', function(snap){
+        var remote = Number(snap.val()) || 0;
+        var w = document.getElementById('verWarn');
+        if(!w) return;
+        if(remote > APP_VERSION){ w.hidden = false; }
+        else if(APP_VERSION > remote){ verRef.set(APP_VERSION); }
+      });
+      fb.ref.on('value', function(snap){
+        var v=snap.val()||{};
+        var list=Object.keys(v).map(function(k){ return Object.assign({}, v[k], { id:k }); });
+        applyRemote(list);
+        setSync('ok','Firebase · リアルタイム同期 '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}));
+      }, function(err){ setSync('err', err.message); });
+    });
+}
+
+/* --- Googleスプレッドシート / カレンダー（GAS: JSONP取得 + フォームPOST書込） --- */
+function jsonp(url, timeout){
+  return new Promise(function(res,rej){
+    var cb='__cr_cb_'+Math.random().toString(36).slice(2);
+    var s=document.createElement('script'); var done=false;
+    var t=setTimeout(function(){ if(!done){ done=true; cleanup(); rej(new Error('接続がタイムアウトしました（デプロイ設定「アクセスできるユーザー: 全員」を確認）')); } }, timeout||15000);
+    function cleanup(){ clearTimeout(t); try{ delete window[cb]; }catch(e){ window[cb]=undefined; } if(s.parentNode) s.parentNode.removeChild(s); }
+    window[cb]=function(d){ if(!done){ done=true; cleanup(); res(d); } };
+    s.onerror=function(){ if(!done){ done=true; cleanup(); rej(new Error('スクリプトを読み込めません（URL・デプロイの新バージョン反映を確認）')); } };
+    s.src = url + (url.indexOf('?')>=0?'&':'?') + 'callback=' + cb;
+    document.head.appendChild(s);
+  });
+}
+function sheetsList(url, action){ return jsonp(url + (url.indexOf('?')>=0?'&':'?') + 'action=' + (action||'list')).then(function(d){
+  if(!d || !d.ok) throw new Error('同期先から一覧を取得できませんでした'); return d; }); }
+function formPost(url, payload){
+  return new Promise(function(res){
+    var f=document.createElement('form');
+    f.action=url; f.method='POST'; f.style.display='none';
+    f.target='cr_postbox';
+    var i=document.createElement('input'); i.type='hidden'; i.name='payload';
+    i.value=JSON.stringify(payload); f.appendChild(i);
+    document.body.appendChild(f); f.submit();
+    setTimeout(function(){ f.remove(); res(); }, 1500);
+  });
+}
+function calActive(){ return !!(state.sync.calendar && state.sync.calendar.enabled && state.sync.calendar.url); }
+function calPullAction(){ return calActive() ? 'calpull' : 'list'; }
+function sheetsMutate(payload){
+  if(state.sync.mode!=='sheets') return;
+  setSync('busy','シートに書き込み中…');
+  enqueue(function(){
+    return formPost(state.sync.sheetsUrl, payload).then(function(){
+      return new Promise(function(r){ setTimeout(r, 800); });
+    }).then(function(){ return sheetsList(state.sync.sheetsUrl, calPullAction()); })
+      .then(function(d){ applyRemote(d.reservations||[]); applyEvents(d.events||[]);
+        setSync('ok','シート同期 · '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})); });
+  });
+}
+function sheetsPoll(manual){
+  if(state.sync.mode!=='sheets' || !state.sync.sheetsUrl) return;
+  enqueue(function(){
+    return sheetsList(state.sync.sheetsUrl, calPullAction()).then(function(d){
+      applyRemote(d.reservations||[]);
+      applyEvents(d.events||[]);
+      renderAll();
+      setSync('ok','シート同期 · '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}));
+      if(manual) toast('最新の予約状況を取得しました');
+    });
+  });
+}
+
+/* --- カレンダー連携 --- */
+function updateCalToggle(){
+  var on = state.sync.calendar.enabled;
+  document.getElementById('calToggle').textContent = 'カレンダー連携：' + (on ? '有効' : '無効');
+  document.getElementById('calToggle').className = 'btn sm' + (on ? ' primary' : '');
+}
+function updateCalState(msg){
+  var c = state.sync.calendar;
+  var t = (!c.enabled) ? 'オフ' : (c.url ? 'オン（' + (c.calendarId ? c.calendarId : 'メインカレンダー') + '）' : 'URL未設定');
+  document.getElementById('calState').textContent = t + (msg ? ' · ' + msg : '');
+}
+function calMirror(action, r){
+  if(!calActive()) return;
+  var c = state.sync.calendar;
+  var rows = (c.rows || []).map(function(x){ return String(x).trim(); }).filter(Boolean);
+  if(rows.length){
+    var nm = String(r.resourceName || '');
+    if(!nm){ var h0 = state.reservations.filter(function(x){ return x.id === r.id; })[0]; if(h0) nm = String(h0.resourceName || ''); }
+    var ok = rows.some(function(n){ return n && nm.indexOf(n) >= 0; });
+    if(!ok) return;
+  }
+  var payload = { action:action, reservation:r, calendarId:c.calendarId };
+  if(state.sync.mode==='sheets') enqueue(function(){ return formPost(state.sync.calendar.url, payload); });
+  else formPost(state.sync.calendar.url, payload);
+}
+function pullCalendars(manual){
+  if(!calActive()) return;
+  if(!state.sync.calendar.pull && !manual) return;
+  enqueue(function(){
+    var pullUrl = state.sync.calendar.url + (state.sync.calendar.calendarId ? '?calendarId=' + encodeURIComponent(state.sync.calendar.calendarId) : '');
+  return sheetsList(pullUrl, 'calpull').then(function(d){
+      if(state.sync.mode==='sheets') applyRemote(d.reservations||[]);
+      applyEvents(d.events||[]);
+      renderAll();
+      setSync('ok','カレンダー取込 · '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}));
+      if(manual) toast('カレンダーから'+((d.events||[]).length)+'件の予定を取り込みました');
+    });
+  });
+}
+
+/* --- 統一インターフェース --- */
+function initSync(){
+  if(state.sync.mode==='firebase' && state.sync.firebaseConfig){
+    connectFirebase(state.sync.firebaseConfig).catch(function(e){ setSync('err', e.message); });
+  }else if(state.sync.mode==='sheets' && state.sync.sheetsUrl){
+    setSync('busy','シートに接続中…');
+    sheetsPoll();
+    sheetsTimer=setInterval(function(){ if(!document.hidden) sheetsPoll(); }, 10000);
+  }else{
+    setSync('ok','');
+  }
+  if(calActive()){
+    pullCalendars();
+    calTimer=setInterval(function(){ if(!document.hidden) pullCalendars(); }, 30000);
+  }
+}
+function syncAdd(r){
+  if(state.sync.mode==='local'){ state.reservations.push(r); persistRes(); renderAll(); }
+  else if(state.sync.mode==='firebase'){
+    state.reservations.push(r); persistRes(); renderAll(); setSync('busy');
+    fb.ref.child(r.id).set(r)
+      .then(function(){ setSync('ok','Firebase · 同期完了'); })
+      .catch(function(e){ setSync('err', e.message); toast('同期に失敗しました', true); });
+  }else{
+    state.reservations.push(r); persistRes(); renderAll();
+    sheetsMutate({ action:'add', reservation:r });
+  }
+  calMirror('caladd', r);
+}
+function syncUpdate(r){
+  if(state.sync.mode==='local'){
+    for(var i=0;i<state.reservations.length;i++) if(state.reservations[i].id===r.id) state.reservations[i]=r;
+    persistRes(); renderAll();
+  }else if(state.sync.mode==='firebase'){
+    setSync('busy');
+    fb.ref.child(r.id).set(r)
+      .then(function(){ setSync('ok','Firebase · 同期完了'); })
+      .catch(function(e){ setSync('err', e.message); toast('同期に失敗しました', true); });
+  }else{
+    for(var j=0;j<state.reservations.length;j++) if(state.reservations[j].id===r.id) state.reservations[j]=r;
+    persistRes(); renderAll();
+    sheetsMutate({ action:'update', reservation:r });
+  }
+  calMirror('calupdate', r);
+}
+function syncRemove(id){
+  var delRec = state.reservations.filter(function(x){ return x.id===id; })[0];
+  if(state.sync.mode==='local'){
+    state.reservations = state.reservations.filter(function(x){ return x.id!==id; });
+    persistRes(); renderAll();
+  }else if(state.sync.mode==='firebase'){
+    setSync('busy');
+    fb.ref.child(id).remove()
+      .then(function(){ setSync('ok','Firebase · 同期完了'); })
+      .catch(function(e){ setSync('err', e.message); });
+  }else{
+    state.reservations = state.reservations.filter(function(x){ return x.id!==id; });
+    persistRes(); renderAll();
+    sheetsMutate({ action:'delete', id:id });
+  }
+  calMirror('caldelete', { id:id, resourceName: delRec ? delRec.resourceName : '' });
+}
+function pushLocalToRemote(){
+  var mode = state.sync.mode;
+  if(mode==='local'){ toast('先に「データ同期」でFirebaseかスプレッドシートに接続してください', true); return; }
+  if(!confirm('同期先の予約一覧を、この端末のデータ（'+state.reservations.length+'件）で置き換えます。よろしいですか？')) return;
+  if(mode==='firebase'){
+    setSync('busy','アップロード中…');
+    var map={};
+    state.reservations.forEach(function(r){ map[r.id]=r; });
+    fb.ref.set(map).then(function(){ toast('アップロードしました'); setSync('ok','Firebase · 同期完了'); })
+      .catch(function(e){ setSync('err', e.message); });
+  }else{
+    setSync('busy','アップロード中…');
+    enqueue(function(){
+      return formPost(state.sync.sheetsUrl, { action:'import', reservations:state.reservations })
+        .then(function(){ return sheetsList(state.sync.sheetsUrl, calPullAction()); })
+        .then(function(d){ applyRemote(d.reservations||[]); applyEvents(d.events||[]);
+          toast('アップロードしました'); setSync('ok','シート同期 · 完了'); });
+    });
+  }
+}
+
+/* ---------- GASコード ---------- */
+var GAS_CODE = [
+'// CleanReserve → Googleスプレッドシート + Googleカレンダー 予約同期スクリプト',
+'// 使い方: スプレッドシートの「拡張機能 → Apps Script」に貼り付け、',
+'//         「デプロイ → 新しいデプロイ → ウェブアプリ」（実行者: 自分 / アクセス: 全員）で公開したURLをアプリ側に設定してください。',
+'//         カレンダー連携時は再デプロイ（新バージョン）と承認（カレンダー権限）が必要です。',
+'var SHEET_NAME = \'reservations\';',
+'var HEADERS = [\'id\',\'date\',\'resourceId\',\'resourceName\',\'start\',\'end\',\'user\',\'purpose\',\'createdAt\',\'updatedAt\',\'type\'];',
+'var CAL_TAG = \'cr-id\';',
+'',
+'function doGet(e){',
+'  var action = (e && e.parameter && e.parameter.action) || \'list\';',
+'  var out = handle({ action: action });',
+'  if (e && e.parameter && e.parameter.callback) {',
+'    return ContentService.createTextOutput(e.parameter.callback + \'(\' + JSON.stringify(out) + \')\')',
+'      .setMimeType(ContentService.MimeType.JAVASCRIPT);',
+'  }',
+'  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);',
+'}',
+'',
+'function doPost(e){',
+'  var req = {};',
+'  try {',
+'    if (e.parameter && e.parameter.payload) req = JSON.parse(e.parameter.payload);',
+'    else if (e.postData) req = JSON.parse(e.postData.contents);',
+'  } catch (err) {}',
+'  return ContentService.createTextOutput(JSON.stringify(handle(req))).setMimeType(ContentService.MimeType.JSON);',
+'}',
+'',
+'function handle(req){',
+'  var sh = getSheet();',
+'  var lock = LockService.getScriptLock();',
+'  lock.waitLock(10000);',
+'  try {',
+'    var action = (req && req.action) || \'list\';',
+'    var list = readAll(sh);',
+'    if (action === \'add\') {',
+'      var r = req.reservation;',
+'      if (!r || !r.id || !r.date) return { ok:false, error:\'bad_request\', reservations:list };',
+'      var c = conflict(list, r, null);',
+'      if (c) return { ok:false, error:\'conflict\', conflict:c, reservations:list };',
+'      sh.appendRow(rowOf(r));',
+'      try { calUpsert(r, req.calendarId); } catch (err) {}',
+'    } else if (action === \'update\') {',
+'      var r2 = req.reservation;',
+'      var idx = -1;',
+'      for (var i = 0; i < list.length; i++) if (list[i].id === r2.id) { idx = i; break; }',
+'      if (idx >= 0) {',
+'        var c2 = conflict(list, r2, r2.id);',
+'        if (c2) return { ok:false, error:\'conflict\', conflict:c2, reservations:list };',
+'        sh.getRange(idx + 2, 1, 1, HEADERS.length).setValues([rowOf(r2)]);',
+'      }',
+'      try { calUpsert(r2, req.calendarId); } catch (err) {}',
+'    } else if (action === \'delete\') {',
+'      for (var j = 0; j < list.length; j++) if (list[j].id === req.id) { sh.deleteRow(j + 2); break; }',
+'      try { calDelete(req.id, req.calendarId); } catch (err) {}',
+'    } else if (action === \'import\') {',
+'      if (sh.getLastRow() > 1) sh.deleteRows(2, sh.getLastRow() - 1);',
+'      var rows = (req.reservations || []).map(rowOf);',
+'      if (rows.length) sh.getRange(2, 1, rows.length, HEADERS.length).setValues(rows);',
+'    } else if (action === \'caladd\') {',
+'      try { calUpsert(req.reservation, req.calendarId); } catch (err) {}',
+'    } else if (action === \'calupdate\') {',
+'      try { calUpsert(req.reservation, req.calendarId); } catch (err) {}',
+'    } else if (action === \'caldelete\') {',
+'      try { calDelete(req.id, req.calendarId); } catch (err) {}',
+'    } else if (action === \'calpull\') {',
+'      var ev = [];',
+'      try { ev = calPull(req.calendarId); } catch (err) {}',
+'      return { ok:true, reservations: readAll(sh), events: ev };',
+'    }',
+'    return { ok:true, reservations: readAll(sh) };',
+'  } finally {',
+'    lock.releaseLock();',
+'  }',
+'}',
+'',
+'function getSheet(){',
+'  var ss = SpreadsheetApp.getActiveSpreadsheet();',
+'  var sh = ss.getSheetByName(SHEET_NAME);',
+'  if (!sh) { sh = ss.insertSheet(SHEET_NAME); sh.appendRow(HEADERS); }',
+'  return sh;',
+'}',
+'',
+'function readAll(sh){',
+'  var vals = sh.getDataRange().getValues();',
+'  var out = [];',
+'  for (var i = 1; i < vals.length; i++) {',
+'    var row = vals[i];',
+'    if (!row[0]) continue;',
+'    out.push({ id:String(row[0]), date:String(row[1]), resourceId:String(row[2]), resourceName:String(row[3]),',
+'      start:String(row[4]), end:String(row[5]), user:String(row[6]), purpose:String(row[7]),',
+'      createdAt:Number(row[8]) || 0, updatedAt:Number(row[9]) || 0, type:String(row[10]) || \'\' });',
+'  }',
+'  return out;',
+'}',
+'',
+'function rowOf(r){',
+'  return [r.id, r.date, r.resourceId, r.resourceName || \'\', r.start, r.end, r.user, r.purpose || \'\', r.createdAt || 0, r.updatedAt || 0, r.type || \'\'];',
+'}',
+'',
+'function conflict(list, r, excludeId){',
+'  for (var i = 0; i < list.length; i++) {',
+'    var x = list[i];',
+'    if (x.id === excludeId) continue;',
+'    if (x.date === r.date && x.resourceId === r.resourceId && x.start < r.end && r.start < x.end) return x;',
+'  }',
+'  return null;',
+'}',
+'',
+'/* ---- Googleカレンダー連携 ---- */',
+'function calById(calendarId){',
+'  return calendarId ? CalendarApp.getCalendarById(calendarId) : CalendarApp.getDefaultCalendar();',
+'}',
+'',
+'function evTitle(r){',
+'  return (r.type ? \'【\' + r.type + \'】\' : \'\') + (r.purpose || \'\') + \'（\' + (r.resourceName || \'\') + \'）\';',
+'}',
+'',
+'function evStart(r){',
+'  var p = String(r.date).split(\'-\');',
+'  var t = String(r.start).split(\':\');',
+'  return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), Number(t[0]), Number(t[1]));',
+'}',
+'',
+'function evEnd(r){',
+'  var p = String(r.date).split(\'-\');',
+'  var t = String(r.end).split(\':\');',
+'  return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), Number(t[0]), Number(t[1]));',
+'}',
+'',
+'function calUpsert(r, calendarId){',
+'  if (!r || !r.id || !r.date) return;',
+'  var cal = calById(calendarId);',
+'  if (!cal) return;',
+'  var from = new Date(evStart(r).getTime() - 24 * 3600 * 1000);',
+'  var to = new Date(evEnd(r).getTime() + 24 * 3600 * 1000);',
+'  var events = cal.getEvents(from, to);',
+'  for (var i = 0; i < events.length; i++) {',
+'    if (events[i].getTag(CAL_TAG) === String(r.id)) {',
+'      var ev = events[i];',
+'      ev.setTitle(evTitle(r));',
+'      ev.setTime(evStart(r), evEnd(r));',
+'      ev.setDescription(\'CleanReserve 予約ID: \' + r.id);',
+'      return;',
+'    }',
+'  }',
+'  var nev = cal.createEvent(evTitle(r), evStart(r), evEnd(r), { description: \'CleanReserve 予約ID: \' + r.id });',
+'  nev.setTag(CAL_TAG, String(r.id));',
+'}',
+'',
+'function calDelete(id, calendarId){',
+'  if (!id) return;',
+'  var cal = calById(calendarId);',
+'  if (!cal) return;',
+'  var from = new Date(Date.now() - 60 * 24 * 3600 * 1000);',
+'  var to = new Date(Date.now() + 180 * 24 * 3600 * 1000);',
+'  var events = cal.getEvents(from, to);',
+'  for (var i = 0; i < events.length; i++) {',
+'    if (events[i].getTag(CAL_TAG) === String(id)) { events[i].deleteEvent(); return; }',
+'  }',
+'}',
+'',
+'function pad2(n){ return (n < 10 ? \'0\' : \'\') + n; }',
+'',
+'function calPull(calendarId){',
+'  var cal = calById(calendarId);',
+'  if (!cal) return [];',
+'  var now = new Date();',
+'  var from = new Date(now.getTime() - 7 * 24 * 3600 * 1000);',
+'  var to = new Date(now.getTime() + 30 * 24 * 3600 * 1000);',
+'  var events = cal.getEvents(from, to);',
+'  var out = [];',
+'  var calName = calendarId ? calendarId : cal.getName();',
+'  for (var i = 0; i < events.length; i++) {',
+'    var ev = events[i];',
+'    if (ev.isAllDay()) continue;',
+'    if (ev.getTag(CAL_TAG)) continue; /* アプリ発のミラーは再取り込みしない */',
+'    var s = ev.getStartTime();',
+'    var e = ev.getEndTime();',
+'    out.push({',
+'      id: ev.getId(),',
+'      date: s.getFullYear() + \'-\' + pad2(s.getMonth() + 1) + \'-\' + pad2(s.getDate()),',
+'      start: pad2(s.getHours()) + \':\' + pad2(s.getMinutes()),',
+'      end: pad2(e.getHours()) + \':\' + pad2(e.getMinutes()),',
+'      summary: ev.getTitle() || \'(無題)\',',
+'      calName: calName',
+'    });',
+'  }',
+'  return out;',
+'}'
+].join('\n');
+
+/* ---------- イベント束ね ---------- */
+function bindStaticEvents(){
+  document.getElementById('prevDay').addEventListener('click', function(){ state.date=addDays(state.date,-1); renderAll(); });
+  document.getElementById('nextDay').addEventListener('click', function(){ state.date=addDays(state.date, 1); renderAll(); });
+  document.getElementById('todayBtn').addEventListener('click', function(){ state.date=todayStr(); renderAll(); });
+  document.getElementById('mPrev').addEventListener('click', function(){ state.date=addDays(state.date,-1); renderAll(); });
+  document.getElementById('mNext').addEventListener('click', function(){ state.date=addDays(state.date, 1); renderAll(); });
+  document.getElementById('mToday').addEventListener('click', function(){ state.date=todayStr(); renderAll(); });
+  document.getElementById('datePick').addEventListener('change', function(){
+    if(this.value){ state.date=this.value; renderAll(); } });
+  document.getElementById('mcPrev').addEventListener('click', function(){ state.date=addMonths(state.date,-1); renderAll(); });
+  document.getElementById('mcNext').addEventListener('click', function(){ state.date=addMonths(state.date, 1); renderAll(); });
+  document.getElementById('miniCal').addEventListener('click', function(e){
+    var b=e.target.closest('.mcd');
+    if(b && b.getAttribute('data-date')){ state.date=b.getAttribute('data-date'); renderAll(); switchView('list'); }
+  });
+  document.getElementById('monthView').addEventListener('click', function(e){
+    var c=e.target.closest('.mgc');
+    if(c && c.getAttribute('data-date')){ state.date=c.getAttribute('data-date'); renderAll(); switchView('list'); }
+  });
+  document.getElementById('itemStartPick').addEventListener('change', function(){
+    if(this.value){ itemStartDate=this.value; renderItemView(); } });
+  document.getElementById('itemToday').addEventListener('click', function(){
+    itemStartDate=todayStr(); renderItemView(); });
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(t){
+    t.addEventListener('click', function(){ switchView(t.getAttribute('data-view')); });
+  });
+  document.getElementById('newBtn').addEventListener('click', function(){ openForm({mode:'new'}); });
+  document.getElementById('guideBtn').addEventListener('click', openGuide);
+  document.getElementById('guideClose').addEventListener('click', function(){ document.getElementById('guideOverlay').classList.remove('show'); });
+  document.getElementById('guideOk').addEventListener('click', function(){ document.getElementById('guideOverlay').classList.remove('show'); });
+  document.getElementById('guideOverlay').addEventListener('click', function(e){
+    if(e.target===this) this.classList.remove('show'); });
+  document.getElementById('openSettings').addEventListener('click', function(){ openSettings('basic'); });
+  document.getElementById('demoChip').addEventListener('click', function(){
+    if(demo && confirm('デモを終了してサンプルの予約を削除しますか？')) clearDemo();
+  });
+  document.getElementById('demoShow').addEventListener('click', function(){
+    closeSettings();
+    if(!state.reservations.some(function(x){ return x.demo; })) seedDemo();
+    else { demo=true; persistAll(); renderAll(); updateDemoChip(); toast('デモ画面を表示中です'); }
+  });
+  document.getElementById('setLink').addEventListener('click', function(){ openSettings('sync'); });
+  document.getElementById('calLink').addEventListener('click', function(){ openSettings('sync'); });
+  document.getElementById('syncChip').addEventListener('click', function(){ openSettings('sync'); });
+  document.getElementById('setClose').addEventListener('click', closeSettings);
+  document.getElementById('setSave').addEventListener('click', function(){
+    var n=closeSettings(); toast('設定を保存しました（行'+n+'件）'); });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.stab'), function(t){
+    t.addEventListener('click', function(){
+      var name=t.getAttribute('data-tab');
+      Array.prototype.forEach.call(document.querySelectorAll('.stab'), function(x){
+        x.classList.toggle('on', x===t); });
+      Array.prototype.forEach.call(document.querySelectorAll('.pane'), function(p){
+        p.classList.toggle('on', p.getAttribute('data-pane')===name); });
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.rcard'), function(c){
+    c.addEventListener('click', function(){
+      var mode=c.getAttribute('data-mode');
+      if(mode==='local'){
+        teardownRemote();
+        state.sync={ mode:'local', firebaseConfig:state.sync.firebaseConfig, sheetsUrl:state.sync.sheetsUrl, calendar:state.sync.calendar };
+        persistAll(); pickSyncMode('local'); setSync('ok','');
+        toast('ローカル保存モードに切り替えました');
+      }else{
+        pickSyncMode(mode);
+      }
+    });
+  });
+  document.getElementById('fbConnect').addEventListener('click', function(){
+    try{
+      var cfg=parseFbConfig(document.getElementById('fbConfig').value);
+      state.sync={ mode:'firebase', firebaseConfig:cfg, sheetsUrl:state.sync.sheetsUrl, calendar:state.sync.calendar };
+      persistAll(); pickSyncMode('firebase');
+      connectFirebase(cfg).then(function(){
+        toast('Firebaseに接続しました（リアルタイム同期）');
+        if(calActive()){ pullCalendars(); calTimer=setInterval(function(){ if(!document.hidden) pullCalendars(); }, 30000); }
+      }).catch(function(e){ setSync('err', e.message); toast('接続に失敗: '+e.message, true); });
+    }catch(e){ toast(e.message, true); }
+  });
+  document.getElementById('shConnect').addEventListener('click', function(){
+    var url=document.getElementById('shUrl').value.trim();
+    if(url.indexOf('script.google.com')<0){ toast('WebアプリURL（…/exec）を貼り付けてください', true); return; }
+    setSync('busy','シートに接続中…');
+    sheetsList(url, calPullAction()).then(function(d){
+      state.sync={ mode:'sheets', firebaseConfig:state.sync.firebaseConfig, sheetsUrl:url, calendar:state.sync.calendar };
+      persistAll(); pickSyncMode('sheets');
+      applyRemote(d.reservations||[]);
+      applyEvents(d.events||[]);
+      renderAll();
+      if(sheetsTimer) clearInterval(sheetsTimer);
+      sheetsTimer=setInterval(function(){ if(!document.hidden) sheetsPoll(); }, 10000);
+      if(calActive() && !calTimer) calTimer=setInterval(function(){ if(!document.hidden) pullCalendars(); }, 30000);
+      setSync('ok','シート同期 · 接続完了');
+      toast('スプレッドシートに接続しました（'+(d.reservations||[]).length+'件を取得）');
+    }).catch(function(e){ setSync('err', e.message); toast('接続に失敗: '+e.message, true); });
+  });
+
+  document.getElementById('calToggle').addEventListener('click', function(){
+    state.sync.calendar.enabled = !state.sync.calendar.enabled;
+    persistAll(); updateCalToggle(); updateCalState();
+    if(state.sync.calendar.enabled){
+      document.getElementById('calBox').hidden = false;
+      if(!state.sync.calendar.url) toast('GAS WebアプリURLを設定して「設定を適用」を押してください');
+      else { pullCalendars(); if(!calTimer) calTimer=setInterval(function(){ if(!document.hidden) pullCalendars(); }, 30000); }
+    }
+  });
+  document.getElementById('calApply').addEventListener('click', function(){
+    var url=document.getElementById('calUrl').value.trim();
+    if(url.indexOf('script.google.com')<0){ toast('GAS WebアプリURL（…/exec）を貼り付けてください', true); return; }
+    state.sync.calendar.url = url;
+    state.sync.calendar.calendarId = document.getElementById('calId').value.trim();
+    state.sync.calendar.rows = document.getElementById('calRows').value.split(/[,,、]/).map(function(x){ return x.trim(); }).filter(Boolean);
+    state.sync.calendar.pull = document.getElementById('calPullSel').value === 'on';
+    state.sync.calendar.enabled = true;
+    persistAll(); updateCalToggle(); updateCalState();
+    pullCalendars();
+    if(!calTimer) calTimer=setInterval(function(){ if(!document.hidden) pullCalendars(); }, 30000);
+    toast('カレンダー連携を有効にしました');
+  });
+  document.getElementById('calBack').addEventListener('click', function(){
+    if(!calActive()){ toast('先にカレンダー連携を有効にしてURLを設定してください', true); return; }
+    var c = state.sync.calendar;
+    var rows = (c.rows || []).map(function(x){ return String(x).trim(); }).filter(Boolean);
+    var list = state.reservations.filter(function(r){
+      if(!rows.length) return true;
+      var nm = String(r.resourceName || '');
+      return rows.some(function(n){ return n && nm.indexOf(n) >= 0; });
+    });
+    if(!list.length){ toast('送信対象の予約がありません（「連携する行」の条件に一致なし）', true); return; }
+    if(!confirm('既存の予約 '+list.length+' 件をカレンダーに送信します。よろしいですか？')) return;
+    var seq = Promise.resolve(), done = 0;
+    list.forEach(function(r){
+      seq = seq.then(function(){
+        return formPost(c.url, { action:'caladd', reservation:r, calendarId:c.calendarId });
+      }).then(function(){ done++; });
+    });
+    seq.then(function(){
+      return formPost(c.url, { action:'calreconcile', ids:list.map(function(r){ return r.id; }), calendarId:c.calendarId });
+    }).then(function(){ toast('カレンダーへ '+done+' 件送信し、残っている不要な予定も掃除しました'); })
+      .catch(function(){ toast('送信中にエラーがありました（'+done+' 件完了）', true); });
+  });
+  document.getElementById('calNow').addEventListener('click', function(){ pullCalendars(true); });
+  document.getElementById('mfBar').addEventListener('click', function(e){
+    var c = e.target.closest ? e.target.closest('.mfchip') : null;
+    if(!c) return;
+    var v = c.getAttribute('data-mf') || '';
+    state.monthFilter = (state.monthFilter === v) ? '' : v;
+    renderMonthView();
+  });
+
+  document.getElementById('gasCopy').addEventListener('click', function(){
+    var b=this;
+    (navigator.clipboard ? navigator.clipboard.writeText(GAS_CODE) : Promise.reject())
+      .then(function(){ b.textContent='コピーしました'; })
+      .catch(function(){
+        var t=document.createElement('textarea'); t.value=GAS_CODE; document.body.appendChild(t);
+        t.select(); document.execCommand('copy'); t.remove(); b.textContent='コピーしました'; });
+    setTimeout(function(){ b.textContent='コードをコピー'; }, 2000);
+  });
+  document.getElementById('pushAll').addEventListener('click', pushLocalToRemote);
+  document.getElementById('syncRetry').addEventListener('click', function(){
+    if(state.sync.mode!=='sheets' || !state.sync.sheetsUrl){
+      toast('先に「Googleスプレッドシート」でURLを設定・接続してください', true); return; }
+    if(retryTimer){ clearTimeout(retryTimer); retryTimer=null; }
+    setSync('busy','再接続中…');
+    sheetsPoll(true);
+    toast('同期先に再接続しています…');
+  });
+
+  document.getElementById('resAdd').addEventListener('click', function(){
+    var rows=document.querySelectorAll('#resList .srow').length;
+    document.getElementById('resList').appendChild(resRow({ id:'r'+uid(), name:'', color:RES_COLORS[rows%RES_COLORS.length] }));
+  });
+  function bulkRowsParse(){
+    return document.getElementById('bulkRows').value.split(/\r?\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+  }
+  document.getElementById('bulkAdd').addEventListener('click', function(){
+    var names=bulkRowsParse();
+    if(!names.length){ toast('1行に1件ずつ貼り付けてください', true); return; }
+    var rows=document.querySelectorAll('#resList .srow').length;
+    names.forEach(function(n,i){
+      document.getElementById('resList').appendChild(resRow({ id:'r'+uid(), name:n, color:RES_COLORS[(rows+i)%RES_COLORS.length] }));
+    });
+    document.getElementById('bulkRows').value='';
+    toast(names.length+'行を追加しました。「設定を保存して閉じる」で確定します');
+  });
+  document.getElementById('bulkReplace').addEventListener('click', function(){
+    var names=bulkRowsParse();
+    if(!names.length){ toast('1行に1件ずつ貼り付けてください', true); return; }
+    if(!confirm('現在の行設定を消して、貼り付けた'+names.length+'行に入れ替えます。よろしいですか？')) return;
+    var box=document.getElementById('resList'); box.innerHTML='';
+    names.forEach(function(n,i){
+      box.appendChild(resRow({ id:'r'+uid(), name:n, color:RES_COLORS[i%RES_COLORS.length] }));
+    });
+    document.getElementById('bulkRows').value='';
+    toast('入れ替えました。「設定を保存して閉じる」で確定します');
+  });
+  document.getElementById('expBtn').addEventListener('click', function(){
+    var data=JSON.stringify({ reservations:state.reservations, resources:state.resources, calEvents:state.calEvents }, null, 2);
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+    a.download='cleanreserve-'+todayStr().replace(/-/g,'')+'.json';
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+  document.getElementById('impBtn').addEventListener('click', function(){ document.getElementById('impFile').click(); });
+  document.getElementById('impFile').addEventListener('change', function(){
+    var f=this.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var d=JSON.parse(rd.result);
+        var rs=(d.reservations||[]), now={};
+        state.reservations.forEach(function(x){ now[x.id]=x; });
+        rs.forEach(function(x){ if(x&&x.id) now[x.id]=x; });
+        state.reservations=Object.keys(now).map(function(k){ return now[k]; });
+        (d.resources||[]).forEach(function(r){
+          if(r&&r.id&&r.name&&!resById(r.id)) state.resources.push(r); });
+        if(Array.isArray(d.calEvents)) applyEvents(d.calEvents);
+        persistAll(); renderAll();
+        document.getElementById('setMsg').textContent=rs.length+'件を読み込みました';
+        toast('データを読み込みました');
+      }catch(e){ toast('JSONを読み込めませんでした', true); }
+    };
+    rd.readAsText(f); this.value='';
+  });
+  document.getElementById('clrBtn').addEventListener('click', function(){
+    if(!confirm('この端末の予約データを全て削除します。よろしいですか？')) return;
+    if(!confirm('本当に削除しますか？（元に戻せません）')) return;
+    state.reservations=[]; persistRes(); renderAll();
+    document.getElementById('setMsg').textContent='この端末のデータを削除しました';
+    toast('削除しました');
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Escape'){
+      document.getElementById('formOverlay').classList.remove('show');
+      document.getElementById('guideOverlay').classList.remove('show');
+      document.getElementById('detailOverlay').classList.remove('show');
+      if(document.getElementById('setOverlay').classList.contains('show')) closeSettings();
+    }
+  });
+  window.addEventListener('storage', function(e){
+    if(e.key===LS.res){ try{ state.reservations=JSON.parse(e.newValue||'[]')||[]; renderAll(); }catch(_){} }
+  });
+}
+
+/* ---------- 起動 ---------- */
+(function init(){
+  /* ---- URLバージョン管理：古いURLは最新版へ自動転送（キャッシュ問題の根絶） ---- */
+  (function(){
+    try{
+      if(location.protocol.indexOf('http')!==0) return; /* file:// で開いた場合は転送しない */
+      if(location.hostname!=='keiaizawa1212-cmd.github.io') return; /* Pages以外では転送しない */
+      var m=location.pathname.match(/\/v(\d+)\/?$/);
+      var urlVer=m?Number(m[1]):0;
+      if(urlVer && urlVer!==APP_VERSION){
+        location.replace(location.origin+location.pathname.replace(/\/v\d+\/?$/,'/v'+APP_VERSION+'/')+location.search);
+        return;
+      }
+      if(!urlVer){
+        location.replace(location.origin+location.pathname+'v'+APP_VERSION+'/');
+        return;
+      }
+      /* 同バージョンURLでも常に最新を取りに行く */
+      var check=(function(){ try{ return fetch; }catch(e){ return null; } })();
+      if(check && location.protocol==='https:'){
+        check(location.pathname+'?t='+Date.now(),{cache:'no-store'})
+          .then(function(r){ return r.text(); })
+          .then(function(t){
+            var nm=t.match(/APP_VERSION = (\d+)/);
+            if(nm && Number(nm[1])>APP_VERSION){
+              location.replace(location.origin+location.pathname.replace(/\/v\d+\/?$/,'/v'+Number(nm[1])+'/')+location.search);
+            }
+          }).catch(function(){});
+      }
+    }catch(e){}
+  })();
+  loadState();
+  var bo={ demo:false, shot:null };
+  try{ if(window.CR_BOOT) Object.assign(bo, window.CR_BOOT); }catch(e){}
+  if(bo.uname){ username=String(bo.uname); }
+  try{ var __pf=document.createElement('iframe'); __pf.name='cr_postbox'; __pf.style.display='none'; document.body.appendChild(__pf); }catch(e){}
+  try{
+    var q=new URLSearchParams(location.search);
+    if(q.has('demo')) bo.demo=true;
+    if(q.get('shot')) bo.shot=q.get('shot');
+  }catch(e){}
+
+  bindStaticEvents();
+  bindBoard();
+  if(bo.demo && !state.reservations.length) seedDemo();
+  renderAll();
+  initSync();
+  document.getElementById('gasCode').textContent=GAS_CODE;
+  document.getElementById('verNum') && (document.getElementById('verNum').textContent=APP_VERSION);
+  var vb=document.getElementById('verBadgeNum');
+  if(vb){ vb.textContent=APP_VERSION;
+    vb.parentElement.title='この端末のバージョン: v'+APP_VERSION+'／クリックで最新版を確認';
+  }
+  if(storeIsMemory) document.getElementById('memWarn') && (document.getElementById('memWarn').hidden=false);
+
+  setInterval(function(){ if(isToday(state.date)) renderBoard(); }, 60000);
+  window.addEventListener('resize', fitBoard);
+  /* 開きっぱなしのタブが古いバージョンのままになっていないか自動チェック */
+  function selfVersionCheck(){
+    if(state.sync.mode==='firebase') return; /* Firebase版はバージョン同期で検出済み */
+    fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'})
+      .then(function(r){ return r.text(); })
+      .then(function(t){
+        var m = t.match(/APP_VERSION = (\d+)/);
+        var w = document.getElementById('verWarn');
+        if(m && w && (Number(m[1]) > APP_VERSION)) w.hidden = false;
+      }).catch(function(){});
+  }
+  setInterval(selfVersionCheck, 180000);
+  var vb=document.getElementById('verBadge');
+  if(vb) vb.addEventListener('click', function(){
+    if(state.sync.mode!=='firebase'){ toast('この端末はローカルモードです。設定→データ同期で接続してください', true); return; }
+    toast('最新バージョンを確認しています…');
+    selfVersionCheck();
+    setTimeout(function(){
+      var w=document.getElementById('verWarn');
+      if(w && !w.hidden){ toast('新しいバージョンがあります。ページを再読込してください', true); }
+      else { toast('この端末は最新です（v'+APP_VERSION+'）'); }
+    }, 1200);
+  });
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) selfVersionCheck(); });
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden){
+      if(state.sync.mode==='sheets') sheetsPoll();
+      if(calActive()) pullCalendars();
+    }
+  });
+
+  if(bo.shot==='modal') openForm({mode:'new', startMin:600, endMin:660});
+  if(bo.shot==='settings') openSettings('sync');
+  if(bo.shot==='item') switchView('item');
+  if(bo.shot==='month') switchView('month');
+  if(bo.shot==='guide') openGuide();
+  if(bo.shot==='detail' && state.reservations.length) openDetail(state.reservations[0].id);
+})();
+</script>
+</body>
+</html>
