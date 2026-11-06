@@ -194,6 +194,9 @@ input,select{font:inherit;color:inherit}
 .icard .none{padding:14px 12px;color:var(--sub);font-size:12.5px;border-top:1px solid var(--line2)}
 
 /* ===== カレンダー月間 ===== */
+.mfbar{display:flex;flex-wrap:wrap;gap:5px;padding:2px 0 8px}
+.mfchip{border:1.5px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);font-size:12.5px;font-weight:800;padding:3.5px 12px;cursor:pointer}
+.mfchip.on{border-color:var(--blue);background:#e8f0fe;color:var(--blue)}
 .monthgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:#fff;border:1px solid var(--line);
   border-radius:8px;padding:8px}
 .mgw{font-size:12px;font-weight:700;text-align:center;padding:5px 0;border-radius:4px;color:#fff;background:#6d7280}
@@ -375,6 +378,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
     </section>
 
     <section class="view" data-view="month">
+      <div class="mfbar" id="mfBar"></div>
       <div class="datehead"><h2 id="monthTitle"></h2><span class="stat">日をクリックすると一覧が開きます</span></div>
       <div class="monthgrid" id="monthView"></div>
     </section>
@@ -619,7 +623,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 32;
+var APP_VERSION = 33;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -1053,9 +1057,19 @@ function renderMonthView(){
   var daysInMonth = new Date(p.y, p.m, 0).getDate();
   var weeks = Math.ceil((first.getDay() + daysInMonth) / 7);
   var byDate = {};
+  var mf = state.monthFilter || '';
   state.reservations.forEach(function(x){
+    if(mf && x.resourceId !== mf) return;
     (byDate[x.date]=byDate[x.date]||[]).push(x);
   });
+  var bar = document.getElementById('mfBar');
+  if(bar){
+    var bh = '<button class="mfchip'+(mf?'':' on')+'" data-mf="">全員</button>';
+    state.resources.forEach(function(r){
+      bh += '<button class="mfchip'+(mf===r.id?' on':'')+'" data-mf="'+esc(r.id)+'"'+(calActive()&&(state.sync.calendar.rows||[]).some(function(n){n=String(n).trim();return n&&String(r.name).indexOf(n)>=0;})?' title="Googleカレンダー同期中の行"':'')+'>'+esc(r.name)+'</button>';
+    });
+    bar.innerHTML = bh;
+  }
   var h='';
   for(var w=0; w<7; w++) h += '<div class="mgw'+(w===0?' sun':w===6?' sat':'')+'">'+WD[w]+'</div>';
   for(var i=0;i<weeks*7;i++){
@@ -2032,6 +2046,13 @@ function bindStaticEvents(){
       .catch(function(){ toast('送信中にエラーがありました（'+done+' 件完了）', true); });
   });
   document.getElementById('calNow').addEventListener('click', function(){ pullCalendars(true); });
+  document.getElementById('mfBar').addEventListener('click', function(e){
+    var c = e.target.closest ? e.target.closest('.mfchip') : null;
+    if(!c) return;
+    var v = c.getAttribute('data-mf') || '';
+    state.monthFilter = (state.monthFilter === v) ? '' : v;
+    renderMonthView();
+  });
 
   document.getElementById('gasCopy').addEventListener('click', function(){
     var b=this;
