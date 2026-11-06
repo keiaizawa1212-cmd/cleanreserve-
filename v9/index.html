@@ -619,7 +619,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 31;
+var APP_VERSION = 32;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -960,13 +960,25 @@ function fitBoard(){
   if(!card) return;
   var rows=state.resources.length + (state.calEvents.length?1:0);
   if(!rows) return;
+  var top=card.getBoundingClientRect().top;
   var hint=document.querySelector('.hint');
-  var hintH=(hint && currentView==='list')?hint.offsetHeight+14:0;
-  var avail=window.innerHeight - card.getBoundingClientRect().top - hintH - 6;
+  var hintH=(hint && currentView==='list')?hint.offsetHeight+12:0;
+  var avail;
+  var side=document.querySelector('.side');
+  var bp=Number('860');
+  if(side && window.innerWidth>bp && currentView==='list'){
+    /* 左パネル（私たちのバリュー）の下端に、ボードの下端を合わせる */
+    var sb=side.getBoundingClientRect().bottom;
+    var hr=card.querySelector('.hrow');
+    var hrH=hr?hr.offsetHeight:30;
+    avail=sb-top-hintH-hrH-10;
+  }else{
+    avail=window.innerHeight-top-hintH-6;
+  }
   if(avail<160) avail=160;
   var h=Math.floor(avail/rows);
-  if(h>88) h=88;
-  if(h<46) h=46;
+  if(h>150) h=150;
+  if(h<26) h=26;
   b.style.setProperty('--rowh', h+'px');
 }
 
