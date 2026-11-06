@@ -69,7 +69,6 @@ input,select{font:inherit;color:inherit}
 .mcd.sun{color:var(--sun)}.mcd.sat{color:var(--sat)}
 .mcd:hover{background:var(--lav)}
 .mcd.cur{border-color:#2b2f3a;font-weight:700}
-.mcd i{position:absolute;left:50%;transform:translateX(-50%);bottom:1px;width:4px;height:4px;border-radius:50%;background:var(--blue)}
 .dnav{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
 .dnav button{background:var(--lav);color:var(--lavink);border:1px solid #d8ccf2;border-radius:999px;
   padding:7px 4px;font-size:13px;font-weight:700}
@@ -626,7 +625,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 36;
+var APP_VERSION = 37;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -1037,8 +1036,7 @@ function renderMiniCal(){
     if(dt.getDay()===0 || hn) cls+=' sun'; else if(dt.getDay()===6) cls+=' sat';
     if(ds===state.date) cls+=' cur';
     var tip=[]; if(counts[ds]) tip.push(counts[ds]+'件の予約'); if(hn) tip.push(hn);
-    h += '<button class="'+cls+'" data-date="'+ds+'"'+(tip.length?' title="'+esc(tip.join(' / '))+'"':'')+'>'+dt.getDate()+
-         (counts[ds]?'<i></i>':'')+'</button>';
+    h += '<button class="'+cls+'" data-date="'+ds+'"'+(tip.length?' title="'+esc(tip.join(' / '))+'"':'')+'>'+dt.getDate()+'</button>';
   }
   document.getElementById('miniCal').innerHTML = h;
 }
