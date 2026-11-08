@@ -159,6 +159,9 @@ input,select{font:inherit;color:inherit}
 .blk span{display:block;font-size:13px;font-weight:700;color:#191d2c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .blk.bmd{font-size:12px;padding:3px 6px}
 .blk.bmd span{font-size:10.5px}
+.blk .who{font-weight:700;font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk.bmd .who{font-size:8.5px}
+.blk.bsm .who{font-size:8px}
 .blk.bsm{font-size:9.5px;padding:3px 4px}
 .blk.bsm span{font-size:8.5px}
 .multisel{border:1px solid var(--line);border-radius:6px;max-height:150px;overflow:auto;background:#fff}
@@ -629,7 +632,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 41;
+var APP_VERSION = 42;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -959,12 +962,13 @@ function renderBoard(){
       var l = Math.max(0,(s-OPEN_MIN))/SLOT_MIN;
       var w = Math.max(1,(Math.min(e,CLOSE_MIN)-Math.max(s,OPEN_MIN))/SLOT_MIN);
       var label = isCal ? (x.summary||'(無題)') : (x.type||'その他')+' '+typeIcon(x.type);
-      var sub   = isCal ? (x.calName||'カレンダー') : (x.purpose||'');
+      var sub   = isCal ? (x.calName||'カレンダー') : (String(x.purpose||'').replace(/^〔[^〕]*〕/,''));
+      var who   = (!isCal && x.by) ? x.by : '';
       blks += '<div class="blk'+(isCal?' calblk':'')+(isFuture(x)?'':' past')+((e-s)<=90?' bsm':(e-s)<=150?' bmd':'')+'"'
            +  (isCal?' data-cal="1"':' data-id="'+esc(x.id)+'"')
            +  ' style="--c:'+(isCal?'#565b68':typeColor(x.type))+';left:'+(l/SLOTS*100)+'%;width:calc('+(w/SLOTS*100)+'% - 3px)"'
            +  ' title="'+esc(label)+'　'+esc(x.start)+'〜'+esc(x.end)+(sub?'　'+esc(sub):'')+'">'
-           +  '<b>'+esc(label)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</div>';
+           +  '<b>'+esc(label)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+(who?'<u class="who">'+esc(who)+'</u>':'')+'</div>';
     }
     var nl = (now!==null && now>OPEN_MIN && now<CLOSE_MIN && !isCal)
       ? '<div class="nowline" style="left:'+((now-OPEN_MIN)/(CLOSE_MIN-OPEN_MIN)*100)+'%"></div>' : '';
