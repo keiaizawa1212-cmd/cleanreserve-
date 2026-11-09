@@ -662,7 +662,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 44;
+var APP_VERSION = 45;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -952,6 +952,35 @@ function updExpTotal(){
       + ((f && s) ? ' ＋ ' : '') + (s ? 'その他 '+s.toLocaleString()+'円' : '') + (f ? '）' : '');
   } else row.hidden = true;
 }
+function lastExpenseFor(client, route){
+  var best = null;
+  for(var i=0;i<state.reservations.length;i++){
+    var x = state.reservations[i];
+    if(!(Number(x.fare) > 0)) continue;
+    if(route != null){ if(String(x.route||'').trim() === route){ if(!best || x.date > best.date) best = x; } }
+    else if(client){ var c = (x.client || guessClient(x.purpose) || '').trim(); if(c === client){ if(!best || x.date > best.date) best = x; } }
+  }
+  return best;
+}
+function showPrevFare(x, prefix){
+  var box = document.getElementById('fPrevFare');
+  box.hidden = false;
+  document.getElementById('fPrevTxt').textContent = prefix + ' (' + String(x.date).slice(5).replace('-','/') + ') 往復 ' + Number(x.fare).toLocaleString() + '円' + (x.route ? '　経路: ' + x.route : '');
+  document.getElementById('fUsePrev').setAttribute('data-f', x.fare);
+}
+function onClientOrRoute(){
+  var c = document.getElementById('fClient').value.trim();
+  var rt = document.getElementById('fRoute').value.trim();
+  var last = null, prefix = '前回';
+  if(c){ last = lastExpenseFor(c, null); }
+  if(!last && rt){ last = lastExpenseFor(null, rt); prefix = '同じ経路の前回'; }
+  if(last && (!editing || editing.id !== last.id)){
+    showPrevFare(last, prefix);
+    if(!document.getElementById('fRoute').value && last.route) document.getElementById('fRoute').value = last.route;
+    if(!c && last.client) document.getElementById('fClient').value = last.client;
+    updExpTotal();
+  } else if(!rt){ document.getElementById('fPrevFare').hidden = true; }
+}
 function saveExpHistory(r){
   if(r.client){ try{ var arr = JSON.parse(store.getItem(LS.cli)||'[]'); if(arr.indexOf(r.client)<0){ arr.push(r.client); store.setItem(LS.cli, JSON.stringify(arr.slice(-40))); } }catch(e){} }
   if(r.route && r.fare>0){ try{ var h = getRouteHistory(); h[r.route] = r.fare; store.setItem(LS.rte, JSON.stringify(h)); }catch(e){} }
@@ -974,10 +1003,8 @@ function exportExpCsv(){
   if(!rows.length){ toast('期間内に交通費の入力がありません', true); return; }
   var L = [['日付','担当','クライアント','摘要','種別','金額']];
   rows.forEach(function(r){ L.push(r); });
-  var byC = {}, byT = {}, tot = 0;
-  rows.forEach(function(r){ var c = r[2]||'（未分類）'; byC[c]=(byC[c]||0)+r[5]; byT[r[4]]=(byT[r[4]]||0)+r[5]; tot += r[5]; });
-  L.push([]); L.push(['■クライアント別小計']);
-  Object.keys(byC).sort().forEach(function(k){ L.push(['','','小計：'+k,'','',''+byC[k]]); });
+  var byT = {}, tot = 0;
+  rows.forEach(function(r){ byT[r[4]]=(byT[r[4]]||0)+r[5]; tot += r[5]; });
   L.push([]); L.push(['■種別別小計']);
   Object.keys(byT).sort().forEach(function(k){ L.push(['','','小計：'+k,'','',''+byT[k]]); });
   L.push([]); L.push(['','','合計（'+rows.length+'明細）','','',''+tot]);
@@ -2235,11 +2262,9 @@ function bindStaticEvents(){
       .catch(function(){ toast('送信中にエラーがありました（'+done+' 件完了）', true); });
   });
   document.getElementById('calNow').addEventListener('click', function(){ pullCalendars(true); });
-  document.getElementById('fRoute').addEventListener('input', function(){
-    var h = getRouteHistory(), v = this.value.trim(), box = document.getElementById('fPrevFare');
-    if(v && h[v]){ box.hidden = false; document.getElementById('fPrevTxt').textContent = '前回は往復 '+h[v].toLocaleString()+'円'; document.getElementById('fUsePrev').setAttribute('data-f', h[v]); }
-    else box.hidden = true;
-  });
+  document.getElementById('fRoute').addEventListener('input', onClientOrRoute);
+  document.getElementById('fClient').addEventListener('input', onClientOrRoute);
+  document.getElementById('fClient').addEventListener('change', onClientOrRoute);
   document.getElementById('fUsePrev').addEventListener('click', function(){
     var f = this.getAttribute('data-f'); if(f){ document.getElementById('fFare').value = f; updExpTotal(); }
     document.getElementById('fPrevFare').hidden = true;
