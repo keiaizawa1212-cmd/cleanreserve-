@@ -236,7 +236,7 @@ input,select{font:inherit;color:inherit}
 .modal.wide{width:min(740px,100%)}
 .mhead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0}
 .mhead h3{font-size:16px}
-.mbody{padding:12px 16px 4px;overflow:auto}
+.mbody{padding:12px 16px 4px;overflow:auto;flex:1 1 auto;min-height:0}
 .mfoot{display:flex;gap:8px;align-items:center;padding:10px 16px 14px;border-top:1px solid var(--line2);margin-top:10px}
 .mfoot .spacer{flex:1}
 .f{display:block;margin-bottom:11px}
@@ -662,7 +662,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 43;
+var APP_VERSION = 44;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
