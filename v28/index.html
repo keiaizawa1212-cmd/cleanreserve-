@@ -159,6 +159,12 @@ input,select{font:inherit;color:inherit}
 .blk span{display:block;font-size:13px;font-weight:700;color:#191d2c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .blk.bmd{font-size:12px;padding:3px 6px}
 .blk.bmd span{font-size:10.5px}
+.xr{display:flex;gap:6px;margin-top:4px;align-items:center}
+.xr .xr-n{flex:1.4}
+.xr .xr-c{flex:1;text-align:right}
+.blk .who{font-weight:700;font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk.bmd .who{font-size:8.5px}
+.blk.bsm .who{font-size:8px}
 .blk .who{font-weight:700;font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .blk.bmd .who{font-size:8.5px}
 .blk.bsm .who{font-size:8px}
@@ -426,6 +432,22 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
       </div>
       <div class="f"><span>種類（色分け）</span><div class="typesel" id="fType"></div></div>
       <label class="f"><span>詳細・メモ（任意）</span><input id="fPurpose" placeholder="例：営業定例会議" maxlength="60"></label>
+      <div class="f" style="margin-top:2px"><span>交通費精算（任意・電車往復代など）</span>
+        <div class="srow" style="gap:8px;align-items:flex-end">
+          <label class="f" style="flex:0 0 30%"><span>クライアント</span><input id="fClient" list="clientList" placeholder="例：日本生命"></label>
+          <label class="f" style="flex:0 0 24%"><span>交通費（往復・円）</span><input type="number" id="fFare" min="0" step="10" placeholder="例：2960"></label>
+          <label class="f" style="flex:1"><span>経路メモ</span><input id="fRoute" list="routeList" placeholder="例：九段下 → 市ヶ谷"></label>
+        </div>
+        <div class="srow" id="fPrevFare" hidden style="margin:4px 0 0"><span class="statline" id="fPrevTxt"></span><button class="btn sm" id="fUsePrev" type="button">この額を使う</button></div>
+        <div class="srow" style="margin:4px 0 0;align-items:flex-start">
+          <div style="flex:1"><span style="font-size:11.5px;font-weight:700;color:var(--sub)">その他の費用</span><div id="extraRows"></div></div>
+          <button class="btn sm ghost" id="fAddExtra" type="button">＋ 項目を追加</button>
+        </div>
+        <div class="srow" id="fExpTotalRow" hidden style="margin:4px 0 0"><span class="statline" id="fExpTotal" style="font-weight:800;color:var(--blue)"></span></div>
+      </div>
+      <datalist id="clientList"></datalist>
+      <datalist id="routeList"></datalist>
+      <datalist id="extraList"><option value="駐車場"><option value="タクシー"><option value="宿泊"><option value="昼食"><option value="その他"></datalist>
     </div>
     <div class="mfoot">
       <button class="btn danger" id="fDelete" hidden>🗑 この予約を削除</button>
@@ -449,6 +471,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
         <tr><th>時間</th><td id="dTime"></td></tr>
         <tr><th>種類</th><td><span class="dchip" id="dType"><i></i><span></span></span></td></tr>
         <tr><th>リマインド</th><td id="dRem"></td></tr>
+        <tr><th>交通費</th><td id="dExp">—</td></tr>
         <tr><th>詳細</th><td id="dPurpose"></td></tr>
       </tbody></table>
     </div>
@@ -568,6 +591,13 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
 
       <div class="pane" data-pane="data">
         <div class="statline" style="margin-top:8px">アプリのバージョン: v<span id="verNum"></span>（この画面が古い場合、画面下部のバージョン表示が黄色く点滅します）</div>
+        <div class="seclabel" style="margin-top:8px">交通費精算CSV</div>
+        <div class="srow" style="flex-wrap:wrap">
+          <label class="f" style="flex:0 0 32%"><span>期間（開始）</span><input type="date" id="expFrom"></label>
+          <label class="f" style="flex:0 0 32%"><span>期間（終了）</span><input type="date" id="expTo"></label>
+          <label class="f" style="flex:0 0 30%"><span>対象</span><select id="expWho"></select></label>
+        </div>
+        <div class="srow"><button class="btn primary sm" id="expCsv">交通費CSVを出力</button><span class="statline">明細＋クライアント別・種別別の小計＋合計を出力します（Excel対応）</span></div>
         <div class="seclabel" style="margin-top:8px">バックアップ</div>
         <div class="srow">
           <button class="btn sm" id="expBtn">JSONで書き出す</button>
@@ -627,12 +657,12 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
 /* ---------- 定数 ---------- */
 var SLOT_MIN = 30, OPEN_MIN = 7*60, CLOSE_MIN = 21*60;
 var SLOTS = (CLOSE_MIN - OPEN_MIN) / SLOT_MIN;
-var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1', uname:'cr.uname.v1', rd:'cr.remDismiss.v1' };
+var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1', uname:'cr.uname.v1', rd:'cr.remDismiss.v1', cli:'cr.clients.v1', rte:'cr.routes.v1' };
 var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 42;
+var APP_VERSION = 43;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -819,6 +849,10 @@ function seedDemo(){
   ];
   state.reservations[0].by='佐藤';
   state.reservations[0].remind=600;
+  state.reservations[0].client='日本生命';
+  state.reservations[0].fare=2960;
+  state.reservations[0].route='九段下 → 市ヶ谷';
+  state.reservations[0].extra=[{n:'駐車場',c:400}];
   demo = true;
   persistAll(); renderAll(); updateDemoChip();
   toast('デモ画面を表示しました（解除は上部「デモ画面 ✕」）');
@@ -875,6 +909,88 @@ function checkReminders(){
       try{ new Notification('まもなく: '+(due.type||'その他'), { body: due.start+'〜'+due.end+' '+due.resourceName }); }catch(e){}
     }
   } else { bar.hidden=true; }
+}
+function guessClient(p){
+  var t = String(p||'').replace(/^〔[^〕]*〕/,'').trim();
+  t = t.replace(/^(直行|来客対応|移動|外出|打合せ|訪問)/,'').trim();
+  if(!t) return '';
+  var m = t.split(/[\s　]/)[0] || '';
+  if(!m || /^(会食|面接|定例)$/.test(m)) return '';
+  return m.slice(0,20);
+}
+function getRouteHistory(){ try{ return JSON.parse(store.getItem(LS.rte)||'{}')||{}; }catch(e){ return {}; } }
+function buildExpDatalists(){
+  var cl = {}, seen = {};
+  state.reservations.forEach(function(x){ var g = guessClient(x.purpose); if(g && !seen[g]){ seen[g]=1; cl[g]=1; } });
+  try{ (JSON.parse(store.getItem(LS.cli)||'[]')||[]).forEach(function(c){ if(!seen[c]){ seen[c]=1; cl[c]=1; } }); }catch(e){}
+  document.getElementById('clientList').innerHTML = Object.keys(cl).sort().map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
+  var h = getRouteHistory();
+  document.getElementById('routeList').innerHTML = Object.keys(h).sort().map(function(r){ return '<option value="'+esc(r)+'">'; }).join('');
+}
+function buildExtraRows(list){
+  document.getElementById('extraRows').innerHTML = '';
+  (list||[]).forEach(function(e){ addExtraRow(e.n, e.c); });
+}
+function addExtraRow(n, c){
+  var d = document.createElement('div'); d.className = 'xr';
+  d.innerHTML = '<input class="xr-n" list="extraList" placeholder="例：駐車場" value="'+esc(n||'')+'"><input type="number" class="xr-c" min="0" step="10" placeholder="円" value="'+(c||'')+'"><button class="btn sm ghost xr-x" type="button">✕</button>';
+  document.getElementById('extraRows').appendChild(d);
+}
+function readExtraRows(){
+  return Array.prototype.map.call(document.querySelectorAll('#extraRows .xr'), function(x){
+    var n = x.querySelector('.xr-n').value.trim(), c = Number(x.querySelector('.xr-c').value)||0;
+    return (n && c>0) ? { n:n, c:c } : null;
+  }).filter(Boolean);
+}
+function updExpTotal(){
+  var f = Number(document.getElementById('fFare').value)||0;
+  var s = readExtraRows().reduce(function(a,e){ return a+e.c; }, 0);
+  var row = document.getElementById('fExpTotalRow');
+  if(f+s > 0){ row.hidden = false;
+    document.getElementById('fExpTotal').textContent = '合計 '+(f+s).toLocaleString()+'円'
+      + (f ? '（交通費 '+f.toLocaleString()+'円' : '')
+      + ((f && s) ? ' ＋ ' : '') + (s ? 'その他 '+s.toLocaleString()+'円' : '') + (f ? '）' : '');
+  } else row.hidden = true;
+}
+function saveExpHistory(r){
+  if(r.client){ try{ var arr = JSON.parse(store.getItem(LS.cli)||'[]'); if(arr.indexOf(r.client)<0){ arr.push(r.client); store.setItem(LS.cli, JSON.stringify(arr.slice(-40))); } }catch(e){} }
+  if(r.route && r.fare>0){ try{ var h = getRouteHistory(); h[r.route] = r.fare; store.setItem(LS.rte, JSON.stringify(h)); }catch(e){} }
+}
+function exportExpCsv(){
+  var from = document.getElementById('expFrom').value, to = document.getElementById('expTo').value;
+  var who = document.getElementById('expWho').value;
+  if(!from || !to){ toast('期間を指定してください', true); return; }
+  var rows = [];
+  state.reservations.slice().sort(function(a,b){ return a.date===b.date ? toMin(a.start)-toMin(b.start) : (a.date<b.date?-1:1); })
+  .forEach(function(x){
+    if(x.date < from || x.date > to) return;
+    if(who && x.resourceId !== who) return;
+    var cli = x.client || guessClient(x.purpose) || '';
+    var purp = String(x.purpose||'').replace(/^〔[^〕]*〕/,'');
+    var res = x.resourceName || '';
+    if(x.fare > 0) rows.push([x.date, res, cli, (purp||'移動') + (x.route ? '（'+x.route+'）' : '（往復）'), '電車', x.fare]);
+    (x.extra||[]).forEach(function(e){ if(e && Number(e.c) > 0) rows.push([x.date, res, cli, (purp||e.n)+'・'+e.n, e.n, Number(e.c)]); });
+  });
+  if(!rows.length){ toast('期間内に交通費の入力がありません', true); return; }
+  var L = [['日付','担当','クライアント','摘要','種別','金額']];
+  rows.forEach(function(r){ L.push(r); });
+  var byC = {}, byT = {}, tot = 0;
+  rows.forEach(function(r){ var c = r[2]||'（未分類）'; byC[c]=(byC[c]||0)+r[5]; byT[r[4]]=(byT[r[4]]||0)+r[5]; tot += r[5]; });
+  L.push([]); L.push(['■クライアント別小計']);
+  Object.keys(byC).sort().forEach(function(k){ L.push(['','','小計：'+k,'','',''+byC[k]]); });
+  L.push([]); L.push(['■種別別小計']);
+  Object.keys(byT).sort().forEach(function(k){ L.push(['','','小計：'+k,'','',''+byT[k]]); });
+  L.push([]); L.push(['','','合計（'+rows.length+'明細）','','',''+tot]);
+  var csv = '\uFEFF' + L.map(function(r){
+    return r.map(function(c){ c = String(c==null?'':c); return /[",\n]/.test(c) ? '"'+c.replace(/"/g,'""')+'"' : c; }).join(',');
+  }).join('\r\n');
+  var blob = new Blob([csv], { type:'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '交通費_'+from+'_'+to+'.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ a.remove(); }, 500);
+  toast('交通費CSV（'+rows.length+'明細・合計 '+tot.toLocaleString()+'円）を出力しました');
 }
 function renderValues(){
   var box=document.getElementById('vList');
@@ -1231,6 +1347,14 @@ function openForm(opt){
   document.getElementById('fStart').value = hm(startMin);
   document.getElementById('fEnd').value = hm(endMin);
   document.getElementById('fRemind').value = editing ? (editing.remind ? String(editing.remind) : '') : '30';
+  document.getElementById('fClient').value = editing ? (editing.client||'') : '';
+  document.getElementById('fFare').value = (editing && editing.fare) ? editing.fare : '';
+  document.getElementById('fRoute').value = editing ? (editing.route||'') : '';
+  document.getElementById('fPrevFare').hidden = true;
+  buildExpDatalists();
+  buildExtraRows(editing ? (editing.extra||[]) : []);
+  updExpTotal();
+  if(!editing) setTimeout(function(){ var c=document.getElementById('fClient'); if(!c.value) c.value = guessClient(document.getElementById('fPurpose').value); }, 0);
   buildTypeChips();
 
   document.getElementById('formOverlay').classList.add('show');
@@ -1281,6 +1405,14 @@ function openDetail(id){
   chip.querySelector('i').style.background = typeColor(x.type);
   chip.querySelector('span').textContent = (x.type || 'その他') + ' ' + typeIcon(x.type);
   document.getElementById('dRem').textContent = REM_LABEL[Number(x.remind)] || 'なし';
+  var dexp = document.getElementById('dExp');
+  if(dexp){
+    var ps = [];
+    if(Number(x.fare) > 0) ps.push('交通費（往復）'+Number(x.fare).toLocaleString()+'円');
+    (x.extra||[]).forEach(function(e){ if(Number(e.c) > 0) ps.push(e.n+' '+Number(e.c).toLocaleString()+'円'); });
+    var sum = (Number(x.fare)||0) + (x.extra||[]).reduce(function(a,e){ return a + (Number(e.c)||0); }, 0);
+    dexp.textContent = ps.length ? ps.join(' ／ ') + '　計 ' + sum.toLocaleString() + '円' + (x.route ? '　【'+x.route+'】' : '') : '—';
+  }
   document.getElementById('dPurpose').textContent = x.purpose || '（記入なし）';
   document.getElementById('detailOverlay').classList.add('show');
 }
@@ -1318,6 +1450,10 @@ document.getElementById('fSave').addEventListener('click', function(){
       purpose: document.getElementById('fPurpose').value.trim(),
       by: editing.by || username,
       remind: remindV,
+      client: document.getElementById('fClient').value.trim(),
+      fare: Number(document.getElementById('fFare').value) || 0,
+      route: document.getElementById('fRoute').value.trim(),
+      extra: readExtraRows(),
       createdAt: editing.createdAt, updatedAt: Date.now()
     };
     var c = findConflict(r, editing.id);
@@ -1334,6 +1470,10 @@ document.getElementById('fSave').addEventListener('click', function(){
       purpose: prefix + document.getElementById('fPurpose').value.trim(),
       by: username,
       remind: remindV,
+      client: document.getElementById('fClient').value.trim(),
+      fare: Number(document.getElementById('fFare').value) || 0,
+      route: document.getElementById('fRoute').value.trim(),
+      extra: readExtraRows(),
       createdAt:Date.now(), updatedAt:Date.now() };
     var c = findConflict(r, null);
     if(c){ dup.push(resName(rid)+'（'+c.start+'〜'+c.end+'）'); return; }
@@ -1407,6 +1547,15 @@ function openSettings(tab){
   document.getElementById('calId').value = state.sync.calendar.calendarId || '';
   document.getElementById('calRows').value = (state.sync.calendar.rows || []).join('、');
   document.getElementById('calPullSel').value = state.sync.calendar.pull ? 'on' : 'off';
+  var ef = document.getElementById('expFrom'), et = document.getElementById('expTo');
+  if(ef){
+    var nn = new Date(), yy = nn.getFullYear(), mm2 = nn.getMonth();
+    ef.value = yy+'-'+pad(mm2+1)+'-01';
+    et.value = yy+'-'+pad(mm2+1)+'-'+new Date(yy, mm2+1, 0).getDate();
+    var ew = document.getElementById('expWho');
+    ew.innerHTML = '<option value="">全員</option>';
+    state.resources.forEach(function(r){ var o = document.createElement('option'); o.value = r.id; o.textContent = r.name; ew.appendChild(o); });
+  }
   updateCalToggle(); updateCalState();
   pickSyncMode(state.sync.mode);
   Array.prototype.forEach.call(document.querySelectorAll('.stab'), function(t){
@@ -1496,6 +1645,8 @@ function applyRemote(list){
              user:String(x.user||''), type:String(x.type||''), purpose:String(x.purpose||''),
              by:String(x.by||''),
              remind:(x.remind!=null && x.remind!=='' && !isNaN(Number(x.remind))) ? Number(x.remind) : null,
+             client:String(x.client||''), fare:Number(x.fare)||0, route:String(x.route||''),
+             extra:Array.isArray(x.extra) ? x.extra.map(function(e){ return { n:String(e.n||''), c:Number(e.c)||0 }; }) : [],
              createdAt:Number(x.createdAt)||0, updatedAt:Number(x.updatedAt)||0 };
   });
   persistRes(); renderAll();
@@ -1678,6 +1829,7 @@ function initSync(){
   }
 }
 function syncAdd(r){
+  saveExpHistory(r);
   if(state.sync.mode==='local'){ state.reservations.push(r); persistRes(); renderAll(); }
   else if(state.sync.mode==='firebase'){
     state.reservations.push(r); persistRes(); renderAll(); setSync('busy');
@@ -1691,6 +1843,7 @@ function syncAdd(r){
   calMirror('caladd', r);
 }
 function syncUpdate(r){
+  saveExpHistory(r);
   if(state.sync.mode==='local'){
     for(var i=0;i<state.reservations.length;i++) if(state.reservations[i].id===r.id) state.reservations[i]=r;
     persistRes(); renderAll();
@@ -2082,6 +2235,23 @@ function bindStaticEvents(){
       .catch(function(){ toast('送信中にエラーがありました（'+done+' 件完了）', true); });
   });
   document.getElementById('calNow').addEventListener('click', function(){ pullCalendars(true); });
+  document.getElementById('fRoute').addEventListener('input', function(){
+    var h = getRouteHistory(), v = this.value.trim(), box = document.getElementById('fPrevFare');
+    if(v && h[v]){ box.hidden = false; document.getElementById('fPrevTxt').textContent = '前回は往復 '+h[v].toLocaleString()+'円'; document.getElementById('fUsePrev').setAttribute('data-f', h[v]); }
+    else box.hidden = true;
+  });
+  document.getElementById('fUsePrev').addEventListener('click', function(){
+    var f = this.getAttribute('data-f'); if(f){ document.getElementById('fFare').value = f; updExpTotal(); }
+    document.getElementById('fPrevFare').hidden = true;
+  });
+  document.getElementById('fFare').addEventListener('input', updExpTotal);
+  document.getElementById('fPurpose').addEventListener('input', function(){ var c = document.getElementById('fClient'); if(!c.value) c.value = guessClient(this.value); });
+  document.getElementById('fAddExtra').addEventListener('click', function(){ addExtraRow(); updExpTotal(); });
+  document.getElementById('extraRows').addEventListener('input', updExpTotal);
+  document.getElementById('extraRows').addEventListener('click', function(e){
+    if(e.target && e.target.classList.contains('xr-x')){ e.target.parentNode.remove(); updExpTotal(); }
+  });
+  document.getElementById('expCsv').addEventListener('click', exportExpCsv);
   document.getElementById('mfBar').addEventListener('click', function(e){
     var c = e.target.closest ? e.target.closest('.mfchip') : null;
     if(!c) return;
