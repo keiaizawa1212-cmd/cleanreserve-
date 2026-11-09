@@ -662,7 +662,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 45;
+var APP_VERSION = 46;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -971,15 +971,16 @@ function showPrevFare(x, prefix){
 function onClientOrRoute(){
   var c = document.getElementById('fClient').value.trim();
   var rt = document.getElementById('fRoute').value.trim();
-  var last = null, prefix = '前回';
-  if(c){ last = lastExpenseFor(c, null); }
-  if(!last && rt){ last = lastExpenseFor(null, rt); prefix = '同じ経路の前回'; }
+  var last = null, prefix = '経路から自動入力';
+  if(rt){ last = lastExpenseFor(null, rt); }
+  if(!last && c){ last = lastExpenseFor(c, null); prefix = '同クライアントから自動入力'; }
   if(last && (!editing || editing.id !== last.id)){
-    showPrevFare(last, prefix);
-    if(!document.getElementById('fRoute').value && last.route) document.getElementById('fRoute').value = last.route;
+    document.getElementById('fFare').value = last.fare;
+    if(!rt && last.route) document.getElementById('fRoute').value = last.route;
     if(!c && last.client) document.getElementById('fClient').value = last.client;
+    showPrevFare(last, prefix + '（' + String(last.date).slice(5).replace('-','/') + '分）');
     updExpTotal();
-  } else if(!rt){ document.getElementById('fPrevFare').hidden = true; }
+  } else if(!rt && !c){ document.getElementById('fPrevFare').hidden = true; }
 }
 function saveExpHistory(r){
   if(r.client){ try{ var arr = JSON.parse(store.getItem(LS.cli)||'[]'); if(arr.indexOf(r.client)<0){ arr.push(r.client); store.setItem(LS.cli, JSON.stringify(arr.slice(-40))); } }catch(e){} }
