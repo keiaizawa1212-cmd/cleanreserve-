@@ -159,6 +159,9 @@ input,select{font:inherit;color:inherit}
 .blk span{display:block;font-size:13px;font-weight:700;color:#191d2c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .blk.bmd{font-size:12px;padding:3px 6px}
 .blk.bmd span{font-size:10.5px}
+.dchip-x{display:inline-flex;align-items:center;gap:5px;background:var(--lav);border:1px solid #d8ccf2;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;cursor:pointer}
+.dchip-x b{font-weight:800}
+.dchip-x u{text-decoration:none;color:var(--sub);font-weight:800}
 .xr{display:flex;gap:6px;margin-top:4px;align-items:center}
 .xr .xr-n{flex:1.4}
 .xr .xr-c{flex:1;text-align:right}
@@ -417,6 +420,14 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
         </div>
       </div>
       <label class="f"><span>利用日</span><input type="date" id="fDate"></label>
+      <div class="f" id="fMultiDateBox" hidden><span>追加の日付（仮押さえ等・複数選択可）</span>
+        <div class="srow" style="align-items:flex-end">
+          <label class="f" style="flex:0 0 40%;margin:0"><span style="visibility:hidden">.</span><input type="date" id="fAddDate"></label>
+          <button class="btn sm" id="fAddDateBtn" type="button">＋ 追加</button>
+          <span class="statline" id="fMultiDateN"></span>
+        </div>
+        <div class="srow" id="fMultiDateChips" style="flex-wrap:wrap;gap:4px;margin:6px 0 0"></div>
+      </div>
       <div class="times">
         <label class="f"><span>開始時間</span><input type="time" id="fStart" step="300"></label>
         <span class="dash">〜</span>
@@ -662,7 +673,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 46;
+var APP_VERSION = 47;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -1379,6 +1390,9 @@ function openForm(opt){
   document.getElementById('fFare').value = (editing && editing.fare) ? editing.fare : '';
   document.getElementById('fRoute').value = editing ? (editing.route||'') : '';
   document.getElementById('fPrevFare').hidden = true;
+  window.__multiDates = [];
+  renderMultiDates();
+  document.getElementById('fMultiDateBox').hidden = !!editing;
   buildExpDatalists();
   buildExtraRows(editing ? (editing.extra||[]) : []);
   updExpTotal();
@@ -1387,6 +1401,12 @@ function openForm(opt){
 
   document.getElementById('formOverlay').classList.add('show');
   if(!editing) document.getElementById('fPurpose').focus();
+}
+function renderMultiDates(){
+  var box=document.getElementById('fMultiDateChips');
+  var md=window.__multiDates||[];
+  box.innerHTML = md.map(function(d){ return '<span class="dchip-x" data-d="'+d+'"><b>'+d.slice(5).replace('-','/')+'</b><u>✕</u></span>'; }).join('');
+  document.getElementById('fMultiDateN').textContent = md.length ? ('＋'+md.length+'日登録されます') : '';
 }
 function buildMultiList(preIds, single){
   var box=document.getElementById('fMulti'); box.innerHTML='';
@@ -1492,8 +1512,10 @@ document.getElementById('fSave').addEventListener('click', function(){
   /* 新規：重複を全件チェックしてから、まとめて一括登録（部分登録なし） */
   var recs=[], dup=[];
   var prefix = username ? ('〔'+username+'〕') : '';
+  var dates = [date].concat((window.__multiDates||[]).filter(function(d){ return d && d!==date; }));
   sel.forEach(function(rid){
-    var r = { id:uid(), date:date, resourceId:rid, resourceName:resName(rid),
+  dates.forEach(function(dd){
+    var r = { id:uid(), date:dd, resourceId:rid, resourceName:resName(rid),
       start:start, end:end, user:'', type:pickedType,
       purpose: prefix + document.getElementById('fPurpose').value.trim(),
       by: username,
@@ -1506,6 +1528,7 @@ document.getElementById('fSave').addEventListener('click', function(){
     var c = findConflict(r, null);
     if(c){ dup.push(resName(rid)+'（'+c.start+'〜'+c.end+'）'); return; }
     recs.push(r);
+  });
   });
   closeForm();
   recs.forEach(function(r){ syncAdd(r); });
@@ -2273,6 +2296,26 @@ function bindStaticEvents(){
   document.getElementById('fFare').addEventListener('input', updExpTotal);
   document.getElementById('fPurpose').addEventListener('input', function(){ var c = document.getElementById('fClient'); if(!c.value) c.value = guessClient(this.value); });
   document.getElementById('fAddExtra').addEventListener('click', function(){ addExtraRow(); updExpTotal(); });
+  document.getElementById('fAddDateBtn').addEventListener('click', function(){
+    var v=document.getElementById('fAddDate').value;
+    if(!v){ toast('日付を選んでください', true); return; }
+    var md=window.__multiDates||[];
+    if(v===document.getElementById('fDate').value){ toast('利用日と同じです', true); return; }
+    if(md.indexOf(v)>=0){ toast('追加済みの日付です', true); return; }
+    md.push(v); md.sort(); window.__multiDates=md; renderMultiDates();
+  });
+  document.getElementById('fMultiDateChips').addEventListener('click', function(e){
+    var c=e.target.closest ? e.target.closest('.dchip-x') : null;
+    if(!c) return;
+    var md=window.__multiDates||[];
+    var i=md.indexOf(c.getAttribute('data-d'));
+    if(i>=0){ md.splice(i,1); window.__multiDates=md; renderMultiDates(); }
+  });
+  document.getElementById('fDate').addEventListener('change', function(){
+    var md=window.__multiDates||[];
+    var i=md.indexOf(this.value);
+    if(i>=0){ md.splice(i,1); window.__multiDates=md; renderMultiDates(); }
+  });
   document.getElementById('extraRows').addEventListener('input', updExpTotal);
   document.getElementById('extraRows').addEventListener('click', function(e){
     if(e.target && e.target.classList.contains('xr-x')){ e.target.parentNode.remove(); updExpTotal(); }
