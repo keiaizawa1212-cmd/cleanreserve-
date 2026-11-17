@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>請求まわり — 請求書発行フローアプリ</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{
+  --ink:#14232E; --ink2:#4A5B66; --line:#DDE5EA;
+  --bg:#EEF3F6; --card:#FFFFFF;
+  --brand:#1F6E8C; --brand-dark:#14506A; --brand-soft:#E3EEF4;
+  --wait:#F5C64C; --wait-bg:#FBF3DC;
+  --done:#3D9A73; --done-bg:#E2F2EA;
+  --mfwait:#4A90C4; --mfwait-bg:#E2EEF7;
+  --go:#2E7D5B; --go-bg:#D5EDE2;
+  --sent:#8A99A6; --sent-bg:#EAEEF1;
+  --back:#DE7245; --back-bg:#F9E8DF;
+  --danger:#C6482E;
+  --radius:16px; --shadow:0 2px 10px rgba(20,35,46,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  background:var(--bg); color:var(--ink); font-size:16px; line-height:1.5;
+}
+.app{max-width:720px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:96px}
+@media(min-width:720px){.app{max-width:760px}}
+
+/* ヘッダー */
+header{
+  background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);
+  color:#fff;padding:20px 20px 18px;position:sticky;top:0;z-index:20;
+  border-radius:0 0 20px 20px;box-shadow:var(--shadow);
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .mark{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;letter-spacing:-.5px}
+.brand h1{font-size:20px;font-weight:800;letter-spacing:.02em}
+.brand small{display:block;font-size:11px;font-weight:500;opacity:.75;letter-spacing:.06em}
+.deadline{
+  margin-top:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+  border-radius:12px;padding:9px 14px;display:flex;align-items:center;gap:10px;font-size:13.5px;
+}
+.deadline b{font-size:16px}
+.deadline .warn{color:#FFE08A;font-weight:700}
+.setbtn{
+  margin-top:10px;width:100%;border:1.5px dashed rgba(255,255,255,.5);background:rgba(255,255,255,.10);
+  color:#fff;border-radius:12px;padding:10px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:.15s;
+}
+.setbtn:hover{background:rgba(255,255,255,.2)}
+.verbadge{background:rgba(255,255,255,.25);border-radius:6px;padding:1px 7px;cursor:pointer;font-weight:800}
+.verbadge:hover{background:rgba(255,255,255,.4)}
+.monthbar{margin-top:10px;display:flex;align-items:center;gap:10px;justify-content:flex-end;font-size:12.5px;flex-wrap:wrap}
+.monthbar label{opacity:.85;font-weight:700;white-space:nowrap}
+.mdrop{position:relative}
+.md-btn{
+  border:1.5px solid rgba(255,255,255,.5);background:rgba(255,255,255,.12);color:#fff;
+  border-radius:10px;padding:7px 12px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:.15s;
+  max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.md-btn:hover{background:rgba(255,255,255,.22)}
+.md-panel{
+  display:none;position:absolute;right:0;top:calc(100% + 6px);width:220px;background:#fff;color:var(--ink);
+  border-radius:12px;box-shadow:0 8px 24px rgba(20,35,46,.25);padding:8px;z-index:40;
+}
+.md-panel.open{display:block}
+.md-panel label{
+  display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;
+  font-size:14px;font-weight:700;cursor:pointer;
+}
+.md-panel label:hover{background:var(--brand-soft)}
+.md-panel input{width:18px;height:18px;accent-color:var(--brand);flex:0 0 auto}
+
+/* 担当別売上（売上画面） */
+#page-sales{padding:16px 20px 8px}
+.sales{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+.sales-title{font-size:16px;font-weight:800;padding-bottom:10px;border-bottom:1.5px solid var(--line)}
+.sales-title small{font-size:12px;color:var(--ink2);font-weight:700;margin-left:8px}
+.sales .srow{display:flex;align-items:center;gap:10px;padding:8px 4px}
+.sales .sname{flex:0 0 118px;font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sales .strack{flex:1;height:14px;background:var(--bg);border-radius:7px;overflow:hidden}
+.sales .sbar{height:100%;border-radius:7px;transition:width .3s}
+.sales .sval{flex:0 0 96px;text-align:right;font-weight:800;font-size:14px}
+.sales .sval small{display:block;font-size:10px;color:var(--ink2);font-weight:600}
+.sales .stotal{display:flex;justify-content:flex-end;gap:8px;padding:12px 4px 4px;border-top:1.5px dashed var(--line);margin-top:8px;font-size:14px;font-weight:800}
+.sales .stotal .v{color:var(--brand-dark)}
+.sales .stotal.fy .v{color:var(--go)}
+
+/* 上部タブ（ブラウザ型） */
+.toptabs{display:flex;gap:4px;background:#DCE5EB;padding:8px 20px 0;align-items:flex-end}
+.ttab{
+  border:none;font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer;
+  background:#CBD8E0;color:var(--ink2);padding:12px 30px;border-radius:10px 10px 0 0;transition:.15s;
+}
+.ttab:hover{background:#C2D1DA}
+.ttab.on{background:var(--card);color:var(--ink);box-shadow:inset 0 3.5px 0 var(--brand)}
+.ttab.on:hover{background:var(--card)}
+
+/* パイプライン */
+.pipe{margin:18px 20px 0;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+.pipe h2{font-size:12.5px;color:var(--ink2);font-weight:700;letter-spacing:.08em;margin-bottom:12px}
+.track{display:flex;align-items:center;gap:0}
+.stage{flex:1;text-align:center;position:relative}
+.stage .bubble{
+  width:44px;height:44px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:17px;position:relative;z-index:2;border:2.5px solid transparent;transition:.2s;
+}
+.track .bar{flex:0 0 14px;height:4px;background:var(--line);border-radius:2px;margin-bottom:30px}
+.track .bar.on{background:var(--brand)}
+.stage .lbl{font-size:10.5px;color:var(--ink2);font-weight:700}
+.stage[data-s="入力待ち"] .bubble{background:var(--wait-bg);color:#8A6A0F}
+.stage[data-s="入力済み"] .bubble{background:var(--done-bg);color:var(--done)}
+.stage[data-s="MF送信待ち"] .bubble{background:var(--mfwait-bg);color:var(--mfwait)}
+.stage[data-s="送信GO"] .bubble{background:var(--go-bg);color:var(--go)}
+.stage[data-s="送付済み"] .bubble{background:var(--sent-bg);color:#5B6B78}
+.stage[data-s="差戻し"] .bubble{background:var(--back-bg);color:var(--back)}
+.stage.current .bubble{border-color:var(--brand);box-shadow:0 0 0 4px var(--brand-soft)}
+.pipe .roles{margin-top:12px;font-size:11px;color:var(--ink2);text-align:center}
+.pipe .roles b{color:var(--brand)}
+
+/* タブ */
+.tabs{display:flex;gap:8px;padding:18px 20px 4px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  border:1.5px solid var(--line);background:#fff;color:var(--ink2);border-radius:999px;
+  padding:7px 15px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s;
+}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.tab .cnt{opacity:.65;font-weight:600;margin-left:3px}
+
+/* 検索 */
+.search{margin:8px 20px 0;position:relative}
+.search input{
+  width:100%;border:1.5px solid var(--line);border-radius:12px;background:#fff;
+  padding:11px 14px 11px 40px;font-size:15px;font-family:inherit;color:var(--ink);
+}
+.search input:focus{outline:none;border-color:var(--brand)}
+.search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:17px;height:17px;stroke:var(--ink2)}
+
+/* リスト */
+.list{padding:10px 20px 8px;display:flex;flex-direction:column;gap:10px}
+.row{
+  background:var(--card);border-radius:14px;box-shadow:var(--shadow);
+  padding:14px 16px;display:flex;gap:14px;align-items:center;cursor:pointer;
+  border:1.5px solid transparent;transition:.15s;
+}
+.row:active{transform:scale(.985)}
+.row:hover{border-color:var(--brand-soft)}
+/* 全ステップ完了（送付済み）はカードごとグレー化 */
+.row.cleared{background:#F1F4F6;border-color:#C9D3D9;box-shadow:none}
+.row.cleared .client,.row.cleared .meta{color:#8A99A6}
+.row.cleared .amt .v{color:#8A99A6}
+.row.cleared .steps{opacity:.75}
+.row .chip{
+  flex:0 0 auto;min-width:84px;text-align:center;font-size:11.5px;font-weight:800;
+  padding:6px 8px;border-radius:8px;letter-spacing:.02em;
+}
+.c-入力待ち{background:var(--wait-bg);color:#8A6A0F}
+.c-入力済み{background:var(--done-bg);color:var(--done)}
+.c-MF送信待ち{background:var(--mfwait-bg);color:var(--mfwait)}
+.c-送信GO{background:var(--go-bg);color:var(--go)}
+.c-送付済み{background:var(--sent-bg);color:#5B6B78}
+.c-差戻し{background:var(--back-bg);color:var(--back)}
+.row .main{flex:1;min-width:0}
+.row .client{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{font-size:11.5px;color:var(--ink2);margin-top:2px}
+.row .nextline{font-size:11.5px;color:var(--brand);font-weight:700;margin-top:4px}
+.row .amt{flex:0 0 auto;text-align:right}
+.row .amt .v{font-weight:800;font-size:15px}
+.row .amt .v.tbd{color:#B7B7B7;font-weight:600}
+.row .amt .u{font-size:10.5px;color:var(--ink2)}
+/* ステップクリア表示（幅広・行の位置は固定） */
+.steps{flex:0 0 44%;display:flex;align-items:flex-start;padding-top:2px}
+.st{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:800;border:2px solid var(--line);color:#AEBCC5;background:#fff;
+  position:relative;flex:0 0 auto}
+.st span{position:absolute;top:30px;left:50%;transform:translateX(-50%);font-size:9.5px;
+  white-space:nowrap;color:var(--ink2);font-weight:700}
+.st.done{color:#fff}
+.st.done.s0{background:#3D9A73;border-color:#3D9A73}
+.st.done.s1{background:#4A90C4;border-color:#4A90C4}
+.st.done.s2{background:#E39A2D;border-color:#E39A2D}
+.st.done.s3{background:#1F6E8C;border-color:#1F6E8C}
+.st.done.s0 span{color:#3D9A73}
+.st.done.s1 span{color:#4A90C4}
+.st.done.s2 span{color:#E39A2D}
+.st.done.s3 span{color:#1F6E8C}
+.stline.on.s0{background:#3D9A73}
+.stline.on.s1{background:#4A90C4}
+.stline.on.s2{background:#E39A2D}
+.stline.on.s3{background:#1F6E8C}
+.st.undo{cursor:pointer}
+.st.undo:hover{opacity:.55;transform:scale(.9)}
+.st.cur{border-color:var(--brand);color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.st.cur span{color:var(--brand)}
+.st.tap{cursor:pointer;animation:beat 1.6s ease-in-out infinite}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.st.tap:hover{background:var(--brand);color:#fff}
+.st.tap:hover span{color:var(--brand)}
+.stline{flex:1;height:2px;background:var(--line);flex-grow:1;flex-shrink:1;flex-basis:auto;margin-top:12px;min-width:8px}
+.stline.on{background:var(--done)}
+.empty{padding:40px 20px;text-align:center;color:var(--ink2);font-size:14px}
+
+/* FAB */
+.fab{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+  width:262px;height:54px;border-radius:999px;border:none;cursor:pointer;
+  background:var(--brand);color:#fff;font-size:16.5px;font-weight:800;font-family:inherit;
+  box-shadow:0 6px 20px rgba(31,110,140,.45);display:flex;align-items:center;justify-content:center;gap:9px;
+  transition:.15s;z-index:15;
+}
+.fab:hover{background:var(--brand-dark)}
+.fab:active{transform:translateX(-50%) scale(.97)}
+
+/* ボトムシート */
+.sheet-bg{position:fixed;inset:0;background:rgba(20,35,46,.45);z-index:30;opacity:0;pointer-events:none;transition:.25s}
+.sheet-bg.open{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:50%;bottom:0;transform:translate(-50%,105%);width:100%;max-width:760px;
+  background:#fff;border-radius:22px 22px 0 0;z-index:31;padding:22px 22px 34px;transition:.28s cubic-bezier(.3,.9,.3,1);
+  max-height:88vh;overflow-y:auto;visibility:hidden;
+}
+.sheet.open{transform:translate(-50%,0);visibility:visible}
+.sheet .grip{width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px}
+.sheet h3{font-size:18px;font-weight:800;margin-bottom:16px}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.fld label .req{color:var(--danger)}
+.fld input,.fld select{
+  width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+  font-size:16px;font-family:inherit;background:#fff;color:var(--ink);
+}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--brand)}
+.fld .hint{font-size:11.5px;color:var(--ink2);margin-top:4px}
+.fld-row{display:flex;gap:12px}
+.fld-row .fld{flex:1}
+.btn-main{
+  width:100%;border:none;border-radius:14px;background:var(--brand);color:#fff;
+  font-size:16.5px;font-weight:800;padding:15px;cursor:pointer;font-family:inherit;margin-top:6px;transition:.15s;
+}
+.btn-main:hover{background:var(--brand-dark)}
+/* セットダイアログのリスト */
+.pick{border:1.5px solid var(--line);border-radius:12px;max-height:38vh;overflow-y:auto;margin-bottom:14px}
+.pick label{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bg);
+  font-size:14.5px;cursor:pointer;
+}
+.pick label:last-child{border-bottom:none}
+.pick input{width:19px;height:19px;accent-color:var(--brand);flex:0 0 auto}
+.pick .picked{background:var(--brand-soft)}
+/* 詳細シートのアクション */
+.detail .drow{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--bg);font-size:15px}
+.detail .drow .k{color:var(--ink2);font-size:13px;font-weight:700}
+.detail .drow .v{font-weight:700}
+.detail .drow .v.big{font-size:19px}
+.detail input.date-edit{
+  border:1.5px solid var(--line);border-radius:9px;padding:7px 10px;
+  font-size:14px;font-weight:700;font-family:inherit;color:var(--brand);background:#fff;
+}
+.detail input.date-edit:focus{outline:none;border-color:var(--brand)}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.acts button{
+  border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:13px 8px;
+  font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;color:var(--ink);transition:.15s;
+}
+.acts button:hover{border-color:var(--brand);color:var(--brand)}
+.acts button.next{background:var(--brand);border-color:var(--brand);color:#fff}
+.acts button.next:hover{background:var(--brand-dark);color:#fff}
+.acts button.go{background:var(--go);border-color:var(--go);color:#fff}
+.acts button.cw{border-color:var(--brand);color:var(--brand)}
+.acts .who{display:block;font-size:10.5px;opacity:.75;font-weight:600}
+.flow-note{font-size:11.5px;color:var(--ink2);text-align:center;margin-top:14px;line-height:1.6}
+
+/* トースト */
+.toast{
+  position:fixed;bottom:96px;left:50%;transform:translate(-50%,20px);
+  background:var(--ink);color:#fff;font-size:14px;font-weight:700;
+  padding:12px 22px;border-radius:999px;opacity:0;transition:.25s;z-index:50;pointer-events:none;box-shadow:var(--shadow);
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* フッターノート */
+.foot{padding:6px 24px 20px;text-align:center;font-size:11px;color:var(--ink2)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="mark">請</div>
+      <div><h1>請求まわり<small>請求書発行フローアプリ <span class="verbadge" id="verNum" title="クリックで最新版を確認">v1</span></small></h1></div>
+    </div>
+    <button class="setbtn" id="open-set">⚙ 総務操作：今月の請求対象の得意先をセットする</button>
+    <div class="monthbar"><label>📅 月ごとに見返す（複数選択可）：</label>
+      <div class="mdrop" id="mdrop">
+        <button class="md-btn" id="md-btn" aria-haspopup="listbox">すべて ▾</button>
+        <div class="md-panel" id="md-panel" role="listbox"></div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="toptabs" aria-label="画面切替">
+    <button class="ttab on" data-p="home">📋 請求</button>
+    <button class="ttab" data-p="sales">📊 売上</button>
+  </nav>
+
+  <main class="list" id="list"></main>
+
+  <section id="page-sales" hidden>
+    <div class="sales">
+      <h2 class="sales-title">📊 担当別売上<small id="sales-scope"></small></h2>
+      <div id="sales-body"></div>
+    </div>
+  </section>
+
+  <p class="foot">データは Firebase Realtime Database で保存・全員共有されます（リアルタイム同期）。<br>間違えて✓を付けたら、もう一度その丸をタップすれば1ステップ戻せます。</p>
+</div>
+
+<!-- ボトムシート（月次セット） -->
+<div class="sheet-bg" id="bg"></div>
+<div class="sheet" id="sheet-set" role="dialog" aria-modal="true" aria-label="今月の得意先をセット">
+  <div class="grip"></div>
+  <h3>総務：今月の請求対象をセット</h3>
+  <div class="fld"><label>何月分の請求か <span class="req">*</span></label><input type="month" id="set-month" value="2026-11"><div class="hint">セットする請求の対象月（事業年度は10月〜翌9月）</div></div>
+  <div class="fld"><label>得意先をさがす</label><input type="search" id="set-q" placeholder="会社名で絞り込み"></div>
+  <div class="pick" id="pick"></div>
+  <button class="btn-main" id="btn-set">セットする（入力待ちとして登録）</button>
+  <p class="flow-note">セット後はChatworkで入力依頼の文面をコピーして投稿します</p>
+</div>
+
+<!-- ボトムシート（入力） -->
+<div class="sheet" id="sheet-input" role="dialog" aria-modal="true" aria-label="金額・内容の入力">
+  <div class="grip"></div>
+  <h3 id="in-title">金額・内容の入力</h3>
+  <div class="fld"><label>得意先 <span class="req">*</span></label>
+    <select id="f-client"></select>
+    <div class="hint">マスタ登録済みの得意先から選択（123社）</div></div>
+  <div class="fld-row">
+    <div class="fld"><label>担当 <span class="req">*</span></label><select id="f-tanto"></select></div>
+    <div class="fld"><label>請求日（印字日付）</label><input type="date" id="f-date" value="2026-11-25"></div>
+  </div>
+  <div class="fld"><label>内容 <span class="req">*</span></label><input type="text" id="f-content" placeholder="例：11月顧問報酬"></div>
+  <div class="fld"><label>金額（税込） <span class="req">*</span></label><input type="number" id="f-amount" placeholder="55000" inputmode="numeric"><div class="hint">半角数字で入力</div></div>
+  <button class="btn-main" id="btn-save">保存して「入力済み」にする</button>
+</div>
+
+<!-- ボトムシート（詳細） -->
+<div class="sheet detail" id="sheet-detail" role="dialog" aria-modal="true" aria-label="詳細">
+  <div class="grip"></div>
+  <h3 id="d-title"></h3>
+  <div class="drow"><span class="k">担当</span><span class="v" id="d-tanto"></span></div>
+  <div class="drow"><span class="k">内容</span><span class="v" id="d-content"></span></div>
+  <div class="drow"><span class="k">金額（税込）</span><span class="v big" id="d-amount"></span></div>
+  <div class="drow"><span class="k">請求日</span><input type="date" id="d-date" class="date-edit" aria-label="請求日を変更"></div>
+  <div class="drow"><span class="k">クリア状況</span><span class="v" id="d-steps"></span></div>
+  <div class="drow"><span class="k">次のアクション</span><span class="v" id="d-next"></span></div>
+  <div class="drow"><span class="k">送付日</span><span class="v" id="d-sent"></span></div>
+  <div class="acts" id="d-acts"></div>
+  <p class="flow-note">入力・送信GOの確認は担当／MF作成・送付は総務（本番版では権限で制御）<br>「Chatwork文面を作る」で通知メッセージをコピーします</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Firebase（CleanReserve と同じ共有DB・seikyuノード） ---------- */
+const CR_FB_PRESET = {"apiKey":"AIzaSyA1Hz7AmLAdqKO7uZdpB1JAVnenyaHHF3Y","authDomain":"cleanreserve-cd29a.firebaseapp.com","databaseURL":"https://cleanreserve-cd29a-default-rtdb.firebaseio.com","projectId":"cleanreserve-cd29a","storageBucket":"cleanreserve-cd29a.firebasestorage.app","messagingSenderId":"387779264264","appId":"1:387779264264:web:846623d8527ededde776bd"};
+const APP_VERSION = 1;
+let itemsRef=null, verRef=null, fbReady=false;
+
+const CLIENTS=["旭商事 株式会社","フリージアス 合同会社","株式会社 木村材木店","大進商工 株式会社","有限会社 虎ふぐ","株式会社ＹＯＮＯＨＩ","株式会社 ホソダファーネス","有限会社 細田興産","株式会Ｒｅａｌｉｚｅ","有限会社 常栄ビル","株式会社 髙測","オートプリサイズマシン株式会社","有限会社 唯心","有限会社 福や不動産","株式会社 論山","株式会社レッスン","株式会社 宝仙堂","千代田不動産","トライ総合 有限会社","一般社団法人 全日本土地区画整理士会","一般社団法人 都市計画コンサルタント協会","有限会社 星美クリエイト","株式会社 ヘリオス","株式会社 根本建設","ケー・ピー・アイ 株式会社","合同会社 Nexus Marketing","医療法人社団 ＴＤＧ","宗教法人 東禪寺","株式会社 タンク","株式会社 伊藤総合研究所","株式会社 SUNSHINE","株式会社 マミーメイトサービス","FOREX EXCHANGE 株式会社","思建科学技術 株式会社","山喜食品 株式会社","有限会社 弘真","有限会社 スバルエステート","有限会社 林楽器商会","三宝物産 株式会社","有限会社 恵比寿屋","株式会社 わいわいケース","株式会社 アデ川質店","有限会社 うえはら","株式会社 Body Three GYM","株式会社 永岡書店","株式会社 三恵商事","東京エルエス産業 株式会社","合同会社 安富資本運用","株式会社 ＡＯＲＢ","シナノ産業 株式会社","株式会社 プラスナビ","医療法人社団あべメンタルクリニック","合同会社 しろくろ","株式会社オカイチ","大国自動車工業株式会社","株式会社芝情報総研","有限会社Ｉ．Ｔ．Ｏ．","一般社団法人ＳＵＮＮＹ","株式会社ＪｅｉＫ","株式会社ベルサトー","株式会社長野経営総研","弁理士法人ｉＸ","医療法人社団 目黒まぶたのクリニック","一般社団法人 日本整理収納協会","有限会社 島由産業","有限会社 六輝工務店","株式会社ＫＯエンジニアリング","一般社団法人 日本家事代行協会","株式会社 三和精機工業所","合同会社 シビックデザイン研究所","有限会社 グリーンホームズ","Ｐａｇｏ’ｓ合同会社","ベルシャトゥ東浦和 管理組合","ＡＩＳＨＡ株式会社","医療法人社団 高美会　さやか美容クリニック・町田","有限会社 尾久ギヤー製作所","株式会社アスク","株式会社アサヒ","Tokyo Cars Market 株式会社","合同会社 フロンティア","株式会社高橋総合企画","株式会社伊藤昭宏設計事務所","株式会社 Wrusty","株式会社 山昇冷機製作所","深松建設 株式会社","株式会社e-joy","一般社団法人 日本エアコンクリーニング協会","ラポール駒込 管理組合","医療法人 舞柳","合同会社 ミライエ","杉浦　憲一","有限会社 ニコニコ質店","飯塚鉄工 株式会社","有限会社 カウサル・トレーディング・カンパニー","株式会社 東栄","有限会社 まるやデンキ","有限会社 パリーシューズ","大芳建設 株式会社","株式会社 志希会","株式会社 モアイ","株式会社ＯｉｎＵ","C partners株式会社","株式会社フジマルデザイン","株式会社リーフラット","いつつぼしホスピタリティ　松浦　宏行","豊田歯科クリニック　豊田　幸司","キャンベル　増田　奈保美","相原　正明","うな菊　藤井　直","医療法人社団ＴＤＧ　トータル歯科 東京青井","医療法人社団ＴＤＧ　トータル歯科・矯正歯科 湘南辻堂","ピッコリーノ動物病院","内幸町国際総合法律事務所","前澤　茂男","うえだ眼科クリニック　神田　浩司","スリーワンプロジェクト","清水　俊","藤沼　幸男","株式会社大和精機製作所","株式会社ＢＥＮＣＨ","坂崎　恒昭（坂崎ビル）","コスモエステート　牛渡　宏","炉縁　湊"];
+const TANTOS=["北村 恵美","相澤 系","橋口 周公","岡村 宏之","水谷 あき子","岡本 朗","田中 慎太朗","木村 由子（総務）"];
+const FLOW=["入力待ち","入力済み","MF送信待ち","送信GO","送付済み"];
+const STATUS_CLEAR={"入力待ち":0,"入力済み":1,"MF送信待ち":2,"送信GO":3,"送付済み":4};
+const STEPS=[
+ {n:"入力",short:"入力",next:"金額・内容を入力（担当）"},
+ {n:"MF作成",short:"MF作成",next:"MFで請求書を作成（総務）"},
+ {n:"送信GO",short:"GO",next:"内容を確認して送信GO（担当）"},
+ {n:"送付",short:"送付",next:"MFで送信して完了（総務）"}
+];
+function nextAction(i){
+  if(i.status==="差戻し")return "差戻し内容を修正して再入力（担当）";
+  const cl=STATUS_CLEAR[i.status];
+  return cl>=4?"4ステップすべてクリア！":STEPS[cl].next;
+}
+
+let items=[
+ {id:1,client:"旭商事 株式会社",tanto:"北村 恵美",content:"11月顧問報酬",amount:55000,date:"2026-11-25",status:"送付済み",sent:"2026-11-24",month:"2026年11月分"},
+ {id:2,client:"株式会社 木村材木店",tanto:"岡本 朗",content:"11月記帳代行",amount:33000,date:"2026-11-25",status:"送信GO",sent:"",month:"2026年11月分"},
+ {id:3,client:"医療法人社団 ＴＤＧ",tanto:"相澤 系",content:"11月顧問報酬",amount:220000,date:"2026-11-25",status:"MF送信待ち",sent:"",month:"2026年11月分"},
+ {id:4,client:"有限会社 虎ふぐ",tanto:"岡村 宏之",content:"11月決算申請作業",amount:88000,date:"2026-11-25",status:"入力済み",sent:"",month:"2026年11月分"},
+ {id:5,client:"株式会社 論山",tanto:"北村 恵美",content:"",amount:0,date:"2026-11-25",status:"入力待ち",sent:"",month:"2026年11月分"},
+ {id:6,client:"株式会社 山昇冷機製作所",tanto:"岡村 宏之",content:"11月月次報告",amount:55000,date:"2026-11-25",status:"差戻し",sent:"",month:"2026年11月分"},
+ {id:7,client:"旭商事 株式会社",tanto:"北村 恵美",content:"10月顧問報酬",amount:55000,date:"2026-10-25",status:"送付済み",sent:"2026-10-24",month:"2026年10月分"},
+ {id:8,client:"有限会社 虎ふぐ",tanto:"岡村 宏之",content:"10月決算申請作業",amount:88000,date:"2026-10-25",status:"送付済み",sent:"2026-10-24",month:"2026年10月分"},
+];
+
+const $=s=>document.querySelector(s);
+const fmt=n=>n.toLocaleString("ja-JP");
+
+CLIENTS.forEach(c=>$("#f-client").add(new Option(c)));
+TANTOS.forEach(t=>$("#f-tanto").add(new Option(t)));
+
+function counts(s){return items.filter(i=>i.status===s).length}
+function stepsHTML(i){
+  if(i.status==="差戻し")return '<span class="chip c-差戻し">差戻し</span>';
+  const cl=STATUS_CLEAR[i.status];
+  let h='<div class="steps">';
+  STEPS.forEach((s,idx)=>{
+    if(idx>0)h+='<div class="stline'+(idx<=cl?' on s'+(idx-1):'')+'"></div>';
+    if(idx<cl)h+='<div class="st done s'+idx+' undo" data-id="'+i.id+'" data-step="'+idx+'" title="タップで✓を取り消し">✓<span>'+s.short+'</span></div>';
+    else if(idx===cl)h+='<div class="st cur tap" data-id="'+i.id+'" data-step="'+idx+'" title="'+s.next+'">'+(idx+1)+'<span>'+s.short+'</span></div>';
+    else h+='<div class="st">'+(idx+1)+'<span>'+s.short+'</span></div>';
+  });
+  return h+'</div>';
+}
+let viewMonths=new Set(); /* 空ならすべて表示 */
+function fyOf(i){ /* 事業年度: 10月〜翌9月 */
+  const m=/^(\d{4})年(\d{1,2})月分$/.exec(i.month||""); if(!m)return 0;
+  return +m[1]+(parseInt(m[2])>=10?0:-1);
+}
+function mKey(lb){ const m=/^(\d{4})年(\d{1,2})月分$/.exec(lb||""); return m?+m[1]*12+ +m[2]:0; }
+function monthOptions(){
+  return [...new Set(items.map(i=>i.month).filter(Boolean))].sort((a,b)=>mKey(a)-mKey(b));
+}
+function mdLabel(){
+  return viewMonths.size===0?"すべて":viewMonths.size<=2?[...viewMonths].join("、")+" ▾":viewMonths.size+"件選択 ▾";
+}
+function renderMonths(){
+  $("#md-btn").textContent=mdLabel();
+  $("#md-panel").innerHTML=monthOptions().map(m=>
+    '<label><input type="checkbox" value="'+m+'" '+(viewMonths.has(m)?'checked':'')+'>'+m+'</label>'
+  ).join("")||'<div style="padding:9px 10px;font-size:13px;color:var(--ink2)">まだ月がありません</div>';
+  $("#md-panel").querySelectorAll("input").forEach(cb=>cb.addEventListener("change",()=>{
+    cb.checked?viewMonths.add(cb.value):viewMonths.delete(cb.value);
+    $("#md-btn").textContent=mdLabel();
+    renderList();
+  }));
+}
+$("#md-btn").addEventListener("click",e=>{
+  e.stopPropagation();
+  $("#md-panel").classList.toggle("open");
+});
+document.addEventListener("click",e=>{
+  if(!$("#mdrop").contains(e.target))$("#md-panel").classList.remove("open");
+});
+
+function renderList(){
+  /* 表示順は登録順のまま固定（クリックで並び替わらない） */
+  const shown=items.filter(i=>viewMonths.size===0||viewMonths.has(i.month));
+  $("#list").innerHTML=shown.length?shown.map(i=>
+    '<div class="row'+(i.status==="送付済み"?' cleared':'')+'" tabindex="0" role="button" data-id="'+i.id+'">'+
+    stepsHTML(i)+
+    '<div class="main"><div class="client">'+i.client+'</div><div class="meta">'+i.tanto+'／'+(i.content||"（金額・内容 未入力）")+'／請求日 '+(i.date||"—")+'</div>'+
+    (i.status!=="送付済み"?'<div class="nextline">次のアクション：'+nextAction(i)+'（丸をタップで✓）</div>':'<div class="nextline" style="color:var(--done)">すべてクリア！</div>')+'</div>'+
+    '<div class="amt">'+(i.amount>0?'<div class="v">¥'+fmt(i.amount)+'</div><div class="u">税込</div>':'<div class="v tbd">未入力</div>')+'</div></div>'
+  ).join(""):'<div class="empty">該当する請求はありません。<br>ヘッダーの「得意先をセットする」から始められます。</div>';
+  document.querySelectorAll(".row").forEach(r=>{
+    r.addEventListener("click",()=>openDetail(+r.dataset.id));
+    r.addEventListener("keydown",e=>{if(e.key==="Enter")openDetail(+r.dataset.id)});
+  });
+  /* 次のステップの丸をタップ→その場でチェックが付く */
+  document.querySelectorAll(".st.tap").forEach(d=>d.addEventListener("click",e=>{
+    e.stopPropagation();
+    const i=items.find(x=>x.id===+d.dataset.id), step=+d.dataset.step;
+    if(step===0){openInput(i);return}
+    if(step===1){i.status="MF送信待ち";toast(i.client+" のMF作成をチェック ✓（担当の確認待ち）")}
+    else if(step===2){i.status="送信GO";toast(i.client+" に送信GOをチェック ✓（総務へ自動通知）")}
+    else if(step===3){i.status="送付済み";i.sent="2026-11-24";toast(i.client+" の送付をチェック ✓ すべてクリア！")}
+    persist();
+  }));
+  /* ✓済みの丸をタップ→取り消して1ステップ戻す */
+  document.querySelectorAll(".st.undo").forEach(d=>d.addEventListener("click",e=>{
+    e.stopPropagation();
+    const i=items.find(x=>x.id===+d.dataset.id), step=+d.dataset.step;
+    i.status=FLOW[step];
+    if(step===3)i.sent="";
+    toast(i.client+" の「"+STEPS[step].n+"」の✓を取り消しました（1ステップ戻し）");
+    persist();
+  }));
+}
+function persist(){
+  if(itemsRef&&fbReady){
+    const obj={};
+    items.forEach(it=>{obj[it.fbKey||("i"+it.id)]=it});
+    itemsRef.set(obj);
+  }else{renderAll()}
+}
+function fbInit(){
+  try{
+    firebase.initializeApp(CR_FB_PRESET);
+    itemsRef=firebase.database().ref("seikyu/items");
+    verRef=firebase.database().ref("seikyu/version");
+    itemsRef.on("value",snap=>{
+      const v=snap.val();
+      if(v){
+        items=Object.keys(v).map(k=>Object.assign({fbKey:k},v[k]));
+      }else if(!items.length){
+        persist();
+      }
+      renderAll();
+    },err=>{console.error(err);toast("同期エラー: "+err.message)});
+    verRef.on("value",snap=>{
+      const remote=snap.val()||0;
+      if(remote>APP_VERSION){
+        toast("新しいバージョンがあります。ページを再読込してください");
+        const vb=document.getElementById("verNum"); if(vb){vb.textContent="更新あり";vb.style.background="#E39A2D";}
+      }else if(APP_VERSION>remote){verRef.set(APP_VERSION);}
+    });
+    fbReady=true;
+    const vb=document.getElementById("verNum");
+    if(vb)vb.addEventListener("click",()=>{location.reload(true)});
+  }catch(e){console.error(e);toast("Firebase接続に失敗しました: "+e.message)}
+}
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2400)}
+
+function openBg(){ $("#bg").classList.add("open") }
+function closeSheets(){ $("#bg").classList.remove("open");document.querySelectorAll(".sheet").forEach(s=>s.classList.remove("open")) }
+$("#bg").addEventListener("click",closeSheets);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheets()});
+
+/* ---- 月次セット（総務） ---- */
+let pickSet=new Set();
+function renderPick(){
+  const q=$("#set-q").value.trim();
+  $("#pick").innerHTML=CLIENTS.filter(c=>c.includes(q)).map(c=>
+    '<label class="'+(pickSet.has(c)?'picked':'')+'"><input type="checkbox" value="'+c+'" '+(pickSet.has(c)?'checked':'')+'>'+c+'</label>'
+  ).join("");
+  $("#pick").querySelectorAll("input").forEach(cb=>cb.addEventListener("change",()=>{
+    cb.checked?pickSet.add(cb.value):pickSet.delete(cb.value);renderPick();
+  }));
+}
+function openSet(){ $("#sheet-set").classList.add("open");openBg();renderPick() }
+$("#open-set").addEventListener("click",openSet);
+$("#set-q").addEventListener("input",renderPick);
+ $("#btn-set").addEventListener("click",()=>{
+  if(!pickSet.size){toast("得意先を選択してください");return}
+  const mv=$("#set-month").value;
+  if(!mv){toast("対象月を選択してください");return}
+  const y=+mv.slice(0,4), m=+mv.slice(5,7);
+  const month=y+"年"+m+"月分";
+  let added=0;
+  pickSet.forEach(c=>{
+    if(!items.some(i=>i.client===c&&i.status!=="送付済み")){
+      items.push({id:Date.now()+added,client:c,tanto:TANTOS[added%TANTOS.length],content:"",amount:0,date:"2026-11-25",status:"入力待ち",sent:"",month:"2026年11月分",month:month});
+      added++;
+    }
+  });
+  pickSet=new Set();
+  viewMonths=new Set([month]);
+  closeSheets();persist();
+  toast(month+"（"+added+"件）をセットしました。Chatworkで入力依頼を投稿してください");
+});
+
+/* ---- 入力（担当） ---- */
+let editId=null;
+function openInput(i){
+  editId=i?i.id:null;
+  $("#in-title").textContent=i?"金額・内容の入力（"+i.client+"）":"金額・内容の入力";
+  $("#f-client").value=i?i.client:CLIENTS[0];$("#f-client").disabled=!!i;
+  $("#f-tanto").value=i?i.tanto:TANTOS[0];
+  $("#f-content").value=i?i.content:"";$("#f-amount").value=i&&i.amount?i.amount:"";$("#f-date").value=i?i.date:"2026-11-25";
+  $("#sheet-input").classList.add("open");openBg();
+  setTimeout(()=>$("#f-content").focus(),300);
+}
+$("#btn-save").addEventListener("click",()=>{
+  const ct=$("#f-content").value.trim(),a=+$("#f-amount").value,d=$("#f-date").value,c=$("#f-client").value,t=$("#f-tanto").value;
+  if(!ct){toast("内容を入力してください");$("#f-content").focus();return}
+  if(!a||a<=0){toast("金額を入力してください");$("#f-amount").focus();return}
+  if(editId){
+    const i=items.find(x=>x.id===editId);
+    Object.assign(i,{content:ct,amount:a,date:d,tanto:t,status:"入力済み"});
+    toast(c+" を「入力済み」にしました（総務へ自動通知）");
+  }else{
+    items.push({fbKey:"i"+Date.now(),id:Date.now(),client:c,tanto:t,content:ct,amount:a,date:d,status:"入力待ち",sent:"",month:(new Date().getFullYear())+"年"+(new Date().getMonth()+1)+"月分"});
+    toast(c+" を登録しました（入力待ち）");
+  }
+  closeSheets();persist();
+});
+
+/* ---- 詳細 ---- */
+function openDetail(id){
+  const i=items.find(x=>x.id===id);
+  $("#d-title").textContent=i.client;
+  $("#d-tanto").textContent=i.tanto;$("#d-content").textContent=i.content||"（未入力）";
+  $("#d-amount").textContent=i.amount>0?"¥"+fmt(i.amount):"未入力";
+  $("#d-date").value=i.date||"";
+  $("#d-date").onchange=()=>{i.date=$("#d-date").value;persist();toast(i.client+" の請求日を "+i.date+" に変更しました");};
+  const cl=i.status==="差戻し"?-1:STATUS_CLEAR[i.status];
+  $("#d-steps").innerHTML=cl<0
+    ?'<span class="chip c-差戻し">差戻し</span>'
+    :STEPS.map((s,idx)=>idx<cl?s.n+" ✓":idx===cl?"<b>次は"+s.n+"</b>":s.n).join("　");
+  $("#d-next").textContent=nextAction(i);
+  $("#d-sent").textContent=i.sent||"—";
+  let acts="";
+  if(i.status==="入力待ち") acts+='<button class="next" data-act="input"><span class="who">担当操作</span>金額・内容を入力 → 入力済み</button>';
+  if(i.status==="入力済み") acts+='<button class="next" data-act="mf"><span class="who">総務操作</span>MFで請求書を作成 → 送信待ち</button>';
+  if(i.status==="MF送信待ち") acts+='<button class="go" data-act="go"><span class="who">担当操作</span>送信OK → 送信GO</button>';
+  if(i.status==="MF送信待ち"||i.status==="送信GO") acts+='<button data-act="back"><span class="who">担当操作</span>内容に相違あり → 差戻し</button>';
+  if(i.status==="送信GO") acts+='<button class="next" data-act="send"><span class="who">総務操作</span>MFで送信 → 送付済み</button>';
+  if(i.status!=="送付済み") acts+='<button class="cw" data-act="cw"><span class="who">共通</span>Chatwork文面を作る</button>';
+  $("#d-acts").innerHTML=acts;
+  persist();renderAll();
+  $("#d-acts").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    const act=b.dataset.act;
+    if(act==="input"){closeSheets();openInput(i);return}
+    if(act==="mf"){i.status="MF送信待ち";toast(i.client+" を「MF送信待ち」にしました（担当の確認待ち）")}
+    else if(act==="go"){i.status="送信GO";toast(i.client+" を「送信GO」にしました（総務へ自動通知）")}
+    else if(act==="send"){i.status="送付済み";i.sent="2026-11-24";toast(i.client+" の請求書をMFから送付しました")}
+    else if(act==="back"){i.status="差戻し";toast(i.client+" を差戻しにしました（担当は再入力してください）")}
+    else if(act==="cw"){
+      const msg={
+        "入力待ち":"【請求まわり】今月の請求対象をセットしました。締切（11月25日）までに金額・内容を入力してください。",
+        "入力済み":"【請求まわり】"+i.client+"（"+i.tanto+"分）が入力済みになりました。MFでの作成をお願いします。",
+        "MF送信待ち":"【請求まわり】"+i.client+" の請求書を作成しました。内容確認して「送信GO」をお願いします。",
+        "送信GO":"【請求まわり】"+i.client+" が送信GOになりました。MFからの送付をお願いします。",
+        "差戻し":"【請求まわり】"+i.client+" の請求内容に相違があり差戻しました。再入力をお願いします。"
+      }[i.status]||"";
+      if(navigator.clipboard)navigator.clipboard.writeText(msg).catch(()=>{});
+      toast("Chatwork用の文面をコピーしました");
+      closeSheets();return;
+    }
+    closeSheets();renderAll();
+  }));
+  $("#sheet-detail").classList.add("open");openBg();
+}
+function renderSales(){
+  const shown=items.filter(i=>viewMonths.size===0||viewMonths.has(i.month));
+  $("#sales-scope").textContent=viewMonths.size===0?"（すべての月）":"（"+[...viewMonths].join("・")+"）";
+  const per={};
+  shown.forEach(i=>{if(i.amount>0){per[i.tanto]=per[i.tanto]||{sum:0,n:0};per[i.tanto].sum+=i.amount;per[i.tanto].n++}});
+  const rows=Object.entries(per).sort((a,b)=>b[1].sum-a[1].sum);
+  const max=Math.max(1,...rows.map(r=>r[1].sum));
+  const colors=["#3D9A73","#4A90C4","#E39A2D","#1F6E8C","#8A63C4","#DE7245","#2E9AA6","#7A8B99"];
+  $("#sales-body").innerHTML=(rows.length?rows.map(([t,d],idx)=>
+    '<div class="srow"><span class="sname">'+t+'</span>'+
+    '<div class="strack"><div class="sbar" style="width:'+Math.round(d.sum/max*100)+'%;background:'+colors[idx%colors.length]+'"></div></div>'+
+    '<span class="sval">¥'+fmt(d.sum)+'<small>'+d.n+'件</small></span></div>'
+  ).join(""):'<div class="srow" style="padding:10px 4px 14px;font-size:13px;color:var(--ink2)">表示中の月の売上データはありません</div>')+
+  '<div class="stotal">表示範囲の合計（税込・入力済み分）<span class="v">¥'+fmt(rows.reduce((a,r)=>a+r[1].sum,0))+'</span></div>'+
+  (()=>{ /* 事業年度(10月〜翌9月)ごとの累計 */
+    const fy={};
+    items.forEach(i=>{if(i.amount>0){const f=fyOf(i);if(f){fy[f]=fy[f]||0;fy[f]+=i.amount}}});
+    return Object.keys(fy).sort().reverse().map(f=>
+      '<div class="stotal fy">'+f+'年度累計（10月〜翌9月）<span class="v">¥'+fmt(fy[f])+'</span></div>').join("");
+  })();
+}
+document.querySelectorAll(".ttab").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".ttab").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");
+  $("#page-sales").hidden=b.dataset.p!=="sales";
+  $("#list").style.display=b.dataset.p==="sales"?"none":"flex";
+}));
+
+function renderAll(){renderMonths();renderSales();renderList()}
+renderAll();
+fbInit();
+</script>
+</body>
+</html>
