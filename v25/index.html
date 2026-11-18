@@ -747,7 +747,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 49;
+var APP_VERSION = 50;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -1324,7 +1324,8 @@ function renderMonthView(){
   var byDate = {};
   var mf = state.monthFilter || '';
   state.reservations.forEach(function(x){
-    if(mf && x.resourceId !== mf) return;
+    if(mf){ if(x.resourceId !== mf) return; }
+    else { var rn = resName(x.resourceId); if(rn === '会議室') return; }
     (byDate[x.date]=byDate[x.date]||[]).push(x);
   });
   var bar = document.getElementById('mfBar');
