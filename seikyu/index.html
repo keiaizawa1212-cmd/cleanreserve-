@@ -298,7 +298,7 @@ header{
   <header>
     <div class="brand">
       <div class="mark">月</div>
-      <div><h1>月別御勘定書<small>請求書発行フローアプリ <span class="verbadge" id="verNum" title="クリックで最新版を確認">v10</span></small></h1></div>
+      <div><h1>月別御勘定書<small>請求書発行フローアプリ <span class="verbadge" id="verNum" title="クリックで最新版を確認">v11</span></small></h1></div>
     </div>
     <button class="setbtn" id="open-set">⚙ 請求対象をセットする（通常は総務／登記料などのイレギュラー時は担当）</button>
     <div class="monthbar"><label>📅 月ごとに見返す（複数選択可）：</label>
@@ -307,6 +307,7 @@ header{
         <div class="md-panel" id="md-panel" role="listbox"></div>
       </div>
     </div>
+    <button class="md-btn" id="cfg-open" title="Chatwork通知の設定">⚙通知設定</button>
   </header>
 
   <nav class="toptabs" aria-label="画面切替">
@@ -343,6 +344,7 @@ header{
   <div class="grip"></div>
   <h3>Chatworkの通知先を設定</h3>
   <div class="fld"><label>部屋のURL</label><input type="url" id="cw-url" placeholder="https://www.chatwork.com/#!rid…"><div class="hint">送信GOの通知を流すChatworkの部屋。保存すると次回から自動で開きます</div></div>
+  <div class="fld"><label>GASのURL（自動投稿する場合・任意）</label><input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/…/exec"><div class="hint">設定すると、手動貼り付け不要でChatworkへ自動投稿されます</div></div>
   <button class="btn-main" id="cw-save">保存してChatworkを開く</button>
 </div>
 
@@ -387,8 +389,8 @@ header{
 <script>
 /* ---------- Firebase（CleanReserve と同じ共有DB・seikyuノード） ---------- */
 const CR_FB_PRESET = {"apiKey":"AIzaSyA1Hz7AmLAdqKO7uZdpB1JAVnenyaHHF3Y","authDomain":"cleanreserve-cd29a.firebaseapp.com","databaseURL":"https://cleanreserve-cd29a-default-rtdb.firebaseio.com","projectId":"cleanreserve-cd29a","storageBucket":"cleanreserve-cd29a.firebasestorage.app","messagingSenderId":"387779264264","appId":"1:387779264264:web:846623d8527ededde776bd"};
-const APP_VERSION = 10;
-let itemsRef=null, verRef=null, cfgRef=null, CW_URL="", fbReady=false, cwPending=null;
+const APP_VERSION = 11;
+let itemsRef=null, verRef=null, cfgRef=null, gasRef=null, CW_URL="", GAS_URL="", fbReady=false, cwPending=null;
 
 const CLIENTS=["旭商事 株式会社","フリージアス 合同会社","株式会社 木村材木店","大進商工 株式会社","有限会社 虎ふぐ","株式会社ＹＯＮＯＨＩ","株式会社 ホソダファーネス","有限会社 細田興産","株式会Ｒｅａｌｉｚｅ","有限会社 常栄ビル","株式会社 髙測","オートプリサイズマシン株式会社","有限会社 唯心","有限会社 福や不動産","株式会社 論山","株式会社レッスン","株式会社 宝仙堂","千代田不動産","トライ総合 有限会社","一般社団法人 全日本土地区画整理士会","一般社団法人 都市計画コンサルタント協会","有限会社 星美クリエイト","株式会社 ヘリオス","株式会社 根本建設","ケー・ピー・アイ 株式会社","合同会社 Nexus Marketing","医療法人社団 ＴＤＧ","宗教法人 東禪寺","株式会社 タンク","株式会社 伊藤総合研究所","株式会社 SUNSHINE","株式会社 マミーメイトサービス","FOREX EXCHANGE 株式会社","思建科学技術 株式会社","山喜食品 株式会社","有限会社 弘真","有限会社 スバルエステート","有限会社 林楽器商会","三宝物産 株式会社","有限会社 恵比寿屋","株式会社 わいわいケース","株式会社 アデ川質店","有限会社 うえはら","株式会社 Body Three GYM","株式会社 永岡書店","株式会社 三恵商事","東京エルエス産業 株式会社","合同会社 安富資本運用","株式会社 ＡＯＲＢ","シナノ産業 株式会社","株式会社 プラスナビ","医療法人社団あべメンタルクリニック","合同会社 しろくろ","株式会社オカイチ","大国自動車工業株式会社","株式会社芝情報総研","有限会社Ｉ．Ｔ．Ｏ．","一般社団法人ＳＵＮＮＹ","株式会社ＪｅｉＫ","株式会社ベルサトー","株式会社長野経営総研","弁理士法人ｉＸ","医療法人社団 目黒まぶたのクリニック","一般社団法人 日本整理収納協会","有限会社 島由産業","有限会社 六輝工務店","株式会社ＫＯエンジニアリング","一般社団法人 日本家事代行協会","株式会社 三和精機工業所","合同会社 シビックデザイン研究所","有限会社 グリーンホームズ","Ｐａｇｏ’ｓ合同会社","ベルシャトゥ東浦和 管理組合","ＡＩＳＨＡ株式会社","医療法人社団 高美会　さやか美容クリニック・町田","有限会社 尾久ギヤー製作所","株式会社アスク","株式会社アサヒ","Tokyo Cars Market 株式会社","合同会社 フロンティア","株式会社高橋総合企画","株式会社伊藤昭宏設計事務所","株式会社 Wrusty","株式会社 山昇冷機製作所","深松建設 株式会社","株式会社e-joy","一般社団法人 日本エアコンクリーニング協会","ラポール駒込 管理組合","医療法人 舞柳","合同会社 ミライエ","杉浦　憲一","有限会社 ニコニコ質店","飯塚鉄工 株式会社","有限会社 カウサル・トレーディング・カンパニー","株式会社 東栄","有限会社 まるやデンキ","有限会社 パリーシューズ","大芳建設 株式会社","株式会社 志希会","株式会社 モアイ","株式会社ＯｉｎＵ","C partners株式会社","株式会社フジマルデザイン","株式会社リーフラット","いつつぼしホスピタリティ　松浦　宏行","豊田歯科クリニック　豊田　幸司","キャンベル　増田　奈保美","相原　正明","うな菊　藤井　直","医療法人社団ＴＤＧ　トータル歯科 東京青井","医療法人社団ＴＤＧ　トータル歯科・矯正歯科 湘南辻堂","ピッコリーノ動物病院","内幸町国際総合法律事務所","前澤　茂男","うえだ眼科クリニック　神田　浩司","スリーワンプロジェクト","清水　俊","藤沼　幸男","株式会社大和精機製作所","株式会社ＢＥＮＣＨ","坂崎　恒昭（坂崎ビル）","コスモエステート　牛渡　宏","炉縁　湊"];
 const TANTOS=["北村 恵美","相澤 系","橋口 周公","岡村 宏之","水谷 あき子","岡本 朗","田中 慎太朗","木村 由子（総務）"];
@@ -537,6 +539,8 @@ function fbInit(){
         const vb=document.getElementById("verNum"); if(vb){vb.textContent="更新あり";vb.style.background="#E39A2D";}
       }else if(APP_VERSION>remote){verRef.set(APP_VERSION);}
     });
+    gasRef=firebase.database().ref("seikyu/config/gasUrl");
+    gasRef.on("value",snap=>{GAS_URL=snap.val()||"";});
     cfgRef.on("value",snap=>{CW_URL=snap.val()||"";});
     fbReady=true;
     const vb=document.getElementById("verNum");
@@ -695,6 +699,18 @@ document.querySelectorAll(".ttab").forEach(b=>b.addEventListener("click",()=>{
 
 function goChat(msg,label){
   const full="【月別御勘定書】"+msg;
+  if(GAS_URL){
+    try{
+      fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body:JSON.stringify({message:full})})
+        .then(()=>{toast(label+"（Chatworkへ自動投稿しました）")})
+        .catch(()=>{fallbackChat(full,label)});
+      return;
+    }catch(e){fallbackChat(full,label);return;}
+  }
+  fallbackChat(full,label);
+}
+function fallbackChat(full,label){
   cwPending=full;
   if(navigator.clipboard)navigator.clipboard.writeText(full).catch(()=>{});
   if(CW_URL){
@@ -703,7 +719,8 @@ function goChat(msg,label){
     if(w){bn.hidden=true;toast(label+"（Chatworkを開きました・文面コピー済み）");}
     else{$("#cw-banner-msg").textContent=label+"・文面コピー済み";$("#cw-link").href=CW_URL;bn.hidden=false;}
   }else{
-    $("#cw-url").value="";$("#sheet-cw").classList.add("open");openBg();
+    $("#cw-url").value=CW_URL;$("#gas-url").value=GAS_URL;
+    $("#sheet-cw").classList.add("open");openBg();
     toast(label+"（通知先URLの設定をお願いします）");
   }
 }
@@ -712,6 +729,8 @@ $("#cw-save").addEventListener("click",()=>{
   const u=$("#cw-url").value.trim();
   if(!u){toast("Chatworkの部屋URLを入力してください");return}
   cfgRef.set(u);
+  const g=$("#gas-url").value.trim();
+  if(g){gasRef.set(g);}else{gasRef.remove();}
   if(cwPending&&navigator.clipboard)navigator.clipboard.writeText(cwPending).catch(()=>{});
   cwPending=null;
   const w=window.open(u,"_blank");
@@ -720,6 +739,7 @@ $("#cw-save").addEventListener("click",()=>{
 });
 
 $("#cw-banner-x").addEventListener("click",()=>{$("#cw-banner").hidden=true});
+$("#cfg-open").addEventListener("click",()=>{$("#cw-url").value=CW_URL;$("#gas-url").value=GAS_URL;$("#sheet-cw").classList.add("open");openBg();});
 
 function renderAll(){renderMonths();renderSales();renderList()}
 renderAll();
