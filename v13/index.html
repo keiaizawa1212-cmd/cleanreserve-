@@ -235,7 +235,7 @@ input,select{font:inherit;color:inherit}
   border-radius:8px;padding:8px}
 .mgw{font-size:12px;font-weight:700;text-align:center;padding:5px 0;border-radius:4px;color:#fff;background:#6d7280}
 .mgw.sun{background:#a24640}.mgw.sat{background:#41608f}
-.mgc{min-height:78px;border:1px solid var(--line2);border-radius:5px;padding:4px 5px;font-size:12.5px;cursor:pointer;background:#fff}
+.mgc{min-height:64pxborder:1px solid var(--line2);border-radius:5px;padding:4px 5px;font-size:12.5px;cursor:pointer;background:#fff}
 .mgc:hover{border-color:var(--blue)}
 .mgc.out{background:var(--stripe);color:#b6bac6}
 .mgc.today{border:2px solid #2b2f3a}
@@ -747,7 +747,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 48;
+var APP_VERSION = 49;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -1348,10 +1348,9 @@ function renderMonthView(){
     h += '<div class="'+cls+'" data-date="'+ds+'"><b'+(dt.getDay()===0||hn2?' style="color:var(--sun)"':dt.getDay()===6?' style="color:var(--sat)"':'')+'>'+dt.getDate()+'</b>'+
          (hn2?'<span class="hol">'+esc(hn2)+'</span>':'')+
          (list.length?'<span class="cnt">'+list.length+'</span>':'');
-    list.slice(0,3).forEach(function(x){
+    list.forEach(function(x){
       h += '<div class="pv">'+hm(toMin(x.start))+' '+typeIcon(x.type)+(x.purpose?'『'+esc(x.purpose.slice(0,10))+'』':'')+'</div>';
     });
-    if(list.length>3) h += '<div class="pv">ほか'+(list.length-3)+'件</div>';
     h += '</div>';
   }
   document.getElementById('monthView').innerHTML = h;
