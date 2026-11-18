@@ -504,6 +504,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
         </div>
         <div style="display:flex;gap:8px;padding:10px 4px;align-items:center">
           <button class="btn sm" id="hearSave">💾 保存</button>
+          <button class="btn sm" id="hearCopy" style="background:#2e6fdb">📋 Chatwork用にコピー</button>
           <button class="btn sm" id="hearNew">新規記入</button>
           <span id="hearMsg" style="font-size:12px;color:#2e9e5b"></span>
         </div>
@@ -783,7 +784,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 52;
+var APP_VERSION = 53;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -1418,6 +1419,36 @@ function hearSave(){
     .then(function(r){ if(!r.ok) throw 0; m.style.color='#2e9e5b'; m.textContent='保存しました'; hearClear(); refreshHear(); })
     .catch(function(){ m.style.color='#c23a2b'; m.textContent='保存に失敗しました'; });
 }
+function hearText(o){
+  var L=[];
+  L.push('[title]ヒアリング記録：'+(o.name||'(無題)')+'（'+(o.kbn||'')+'）[/title]');
+  if(o.date) L.push('受電日：'+o.date);
+  var a=[];
+  if(o.a1n||o.a1p) a.push('・土地の個数（筆数・場所）：'+(o.a1n?o.a1n+'筆':'')+(o.a1p?'　'+o.a1p:''));
+  if(o.a2n||o.a2c) a.push('・相続人の人数・構成：'+(o.a2n?o.a2n+'人':'')+(o.a2c?'　'+o.a2c:''));
+  if((o.a3y&&o.a3y!=='未確認')||o.a3v) a.push('・有価証券（株式・投信等）：'+(o.a3y==='未確認'?'':o.a3y||'')+(o.a3v?'　'+o.a3v:''));
+  if(o.a4n||o.a4v) a.push('・現預金の概算額（ざっくり）：'+(o.a4n?'通帳'+o.a4n+'冊':'')+(o.a4v?'　'+o.a4v:''));
+  if(a.length){ L.push(''); L.push('▼ 相続税のヒアリング'); L=L.concat(a); }
+  var b=[];
+  if(o.b1) b.push('・税理士の変更理由：'+o.b1);
+  if(o.b2) b.push('・年間売上規模：'+o.b2+'億円');
+  if(o.b3a||o.b3b||o.b3c) b.push('・従業員数：役員'+(o.b3a||0)+'人／正社員'+(o.b3b||0)+'人／パート'+(o.b3c||0)+'人');
+  if((o.b4y&&o.b4y!=='未確認')||o.b4n) b.push('・給与計算代行：'+(o.b4y==='未確認'?'':o.b4y||'')+(o.b4n?'　'+o.b4n+'人':''));
+  if((o.b5y&&o.b5y!=='未確認')||o.b5s) b.push('・記帳代行：'+(o.b5y==='未確認'?'':o.b5y||'')+(o.b5s?'　使用ソフト：'+o.b5s:''));
+  if(b.length){ L.push(''); L.push('▼ 税理士変更のヒアリング'); L=L.concat(b); }
+  return '[info]'+L.join('\n')+'[/info]';
+}
+function cwCopy(txt){
+  function done(){ var m=document.getElementById('hearMsg'); if(m){ m.style.color='#2e6fdb'; m.textContent='コピーしました（Chatworkにそのまま貼り付けできます）'; } }
+  function fb(){ var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){ var m=document.getElementById('hearMsg'); if(m){ m.style.color='#c23a2b'; m.textContent='コピーに失敗しました'; } }
+    document.body.removeChild(ta); }
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(fb); } else { fb(); }
+}
+function hearCopyFromForm(){
+  var d={}; HEAR_FIELDS.forEach(function(k){ var e=hearEl(k); d[k]=e?e.value:''; });
+  cwCopy(hearText(d));
+}
 function refreshHear(){
   var box=document.getElementById('hearList'); if(!box) return;
   fetch(HEAR_FB+'/hearings.json').then(function(r){ return r.json(); }).then(function(d){
@@ -1425,7 +1456,7 @@ function refreshHear(){
     arr.sort(function(a,b){ return String(b.savedAt||'').localeCompare(String(a.savedAt||'')); });
     if(!arr.length){ box.innerHTML='<div style="color:#98a1b0;padding:6px 4px">保存されたヒアリングはまだありません</div>'; return; }
     box.innerHTML=arr.map(function(o){
-      return '<div class="hear-it" data-id="'+esc(o.__id)+'"><span class="hn">'+esc(o.name||'(無題)')+'</span><span class="hk">'+esc(o.kbn||'')+'</span><span class="hd">'+esc(o.date||'')+'</span><button class="btn sm" data-act="load">開く</button><button class="btn sm" data-act="del" style="background:#c23a2b">削除</button></div>';
+      return '<div class="hear-it" data-id="'+esc(o.__id)+'"><span class="hn">'+esc(o.name||'(無題)')+'</span><span class="hk">'+esc(o.kbn||'')+'</span><span class="hd">'+esc(o.date||'')+'</span><button class="btn sm" data-act="load">開く</button><button class="btn sm" data-act="cw">Chatwork</button><button class="btn sm" data-act="del" style="background:#c23a2b">削除</button></div>';
     }).join('');
   }).catch(function(){});
 }
@@ -1434,13 +1465,17 @@ function initHear(){
   if(sv && !sv.dataset.b){ sv.dataset.b='1'; sv.addEventListener('click',hearSave); }
   var nw=document.getElementById('hearNew');
   if(nw && !nw.dataset.b){ nw.dataset.b='1'; nw.addEventListener('click',hearClear); }
+  var hc=document.getElementById('hearCopy');
+  if(hc && !hc.dataset.b){ hc.dataset.b='1'; hc.addEventListener('click',hearCopyFromForm); }
   var ls=document.getElementById('hearList');
   if(ls && !ls.dataset.b){ ls.dataset.b='1';
     ls.addEventListener('click',function(e){
       var btn=e.target.closest('button'); if(!btn) return;
       var it=btn.closest('.hear-it'); if(!it) return;
       var id=it.getAttribute('data-id');
-      if(btn.getAttribute('data-act')==='load'){
+      if(btn.getAttribute('data-act')==='cw'){
+        fetch(HEAR_FB+'/hearings/'+id+'.json').then(function(r){ return r.json(); }).then(function(o){ if(o) cwCopy(hearText(o)); });
+      } else if(btn.getAttribute('data-act')==='load'){
         fetch(HEAR_FB+'/hearings/'+id+'.json').then(function(r){ return r.json(); }).then(function(o){ if(o){ hearFill(o); var m=document.getElementById('hearMsg'); m.style.color='#2e6fdb'; m.textContent='読み込みました（保存で上書きせず新規追加になります）'; } });
       } else if(btn.getAttribute('data-act')==='del'){
         if(confirm('このヒアリング記録を削除しますか？')){
