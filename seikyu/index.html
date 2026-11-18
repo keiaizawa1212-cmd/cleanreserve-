@@ -230,6 +230,12 @@ header{
 }
 .sheet.open{transform:translate(-50%,0);visibility:visible}
 .sheet .grip{width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px}
+.sheet .close-x{
+  position:absolute;top:12px;right:14px;width:36px;height:36px;border-radius:50%;
+  border:none;background:var(--bg);color:var(--ink2);font-size:19px;cursor:pointer;font-family:inherit;
+}
+.sheet .close-x:hover{background:#E3D9CF;color:var(--ink)}
+.sheet{position:fixed;}
 .sheet h3{font-size:18px;font-weight:800;margin-bottom:16px}
 .fld{margin-bottom:14px}
 .fld label{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:6px}
@@ -298,7 +304,7 @@ header{
   <header>
     <div class="brand">
       <div class="mark">月</div>
-      <div><h1>月別御勘定書<small>請求書発行フローアプリ <span class="verbadge" id="verNum" title="クリックで最新版を確認">v15</span></small></h1></div>
+      <div><h1>月別御勘定書<small>請求書発行フローアプリ <span class="verbadge" id="verNum" title="クリックで最新版を確認">v16</span></small></h1></div>
     </div>
     <button class="setbtn" id="open-set">⚙ 請求対象をセットする（通常は総務／登記料などのイレギュラー時は担当）</button>
     <div class="monthbar"><label>📅 月ごとに見返す（複数選択可）：</label>
@@ -330,7 +336,7 @@ header{
 <!-- ボトムシート（月次セット） -->
 <div class="sheet-bg" id="bg"></div>
 <div class="sheet" id="sheet-set" role="dialog" aria-modal="true" aria-label="今月の得意先をセット">
-  <div class="grip"></div>
+  <div class="grip"></div><button class="close-x" data-close aria-label="閉じる">×</button>
   <h3>総務：今月の請求対象をセット</h3>
   <div class="fld"><label>何月分の請求か <span class="req">*</span></label><input type="month" id="set-month" value="2026-11"><div class="hint">セットする請求の対象月（事業年度は10月〜翌9月）</div></div>
   <div class="fld"><label>種類</label><select id="set-kind"><option>請求書</option><option>領収書</option></select></div>
@@ -344,7 +350,7 @@ header{
 
 <!-- ボトムシート（入力） -->
 <div class="sheet" id="sheet-cw" role="dialog" aria-modal="true" aria-label="Chatworkの通知先を設定">
-  <div class="grip"></div>
+  <div class="grip"></div><button class="close-x" data-close aria-label="閉じる">×</button>
   <h3>Chatworkの通知先を設定</h3>
   <div class="fld"><label>部屋のURL</label><input type="url" id="cw-url" placeholder="https://www.chatwork.com/#!rid…"><div class="hint">送信GOの通知を流すChatworkの部屋。保存すると次回から自動で開きます</div></div>
   <div class="fld"><label>GASのURL（自動投稿する場合・任意）</label><input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/…/exec"><div class="hint">設定すると、手動貼り付け不要でChatworkへ自動投稿されます</div></div>
@@ -352,7 +358,7 @@ header{
 </div>
 
 <div class="sheet" id="sheet-input" role="dialog" aria-modal="true" aria-label="金額・内容の入力">
-  <div class="grip"></div>
+  <div class="grip"></div><button class="close-x" data-close aria-label="閉じる">×</button>
   <h3 id="in-title">金額・内容の入力</h3>
   <div class="fld"><label>得意先 <span class="req">*</span></label>
     <select id="f-client"></select>
@@ -369,7 +375,7 @@ header{
 
 <!-- ボトムシート（詳細） -->
 <div class="sheet detail" id="sheet-detail" role="dialog" aria-modal="true" aria-label="詳細">
-  <div class="grip"></div>
+  <div class="grip"></div><button class="close-x" data-close aria-label="閉じる">×</button>
   <h3 id="d-title"></h3>
   <div class="drow"><span class="k">種類</span><span class="v" id="d-kind"></span></div>
 <div class="drow"><span class="k">種類</span><span class="v" id="d-kind"></span></div>
@@ -395,7 +401,7 @@ header{
 <script>
 /* ---------- Firebase（CleanReserve と同じ共有DB・seikyuノード） ---------- */
 const CR_FB_PRESET = {"apiKey":"AIzaSyA1Hz7AmLAdqKO7uZdpB1JAVnenyaHHF3Y","authDomain":"cleanreserve-cd29a.firebaseapp.com","databaseURL":"https://cleanreserve-cd29a-default-rtdb.firebaseio.com","projectId":"cleanreserve-cd29a","storageBucket":"cleanreserve-cd29a.firebasestorage.app","messagingSenderId":"387779264264","appId":"1:387779264264:web:846623d8527ededde776bd"};
-const APP_VERSION = 15;
+const APP_VERSION = 16;
 let itemsRef=null, verRef=null, cfgRef=null, gasRef=null, clientsRef=null, setsRef=null, EXTRA=[], SETS={}, CW_URL="", GAS_URL="", fbReady=false, cwPending=null;
 const ALL=()=>CLIENTS.concat(EXTRA.filter(c=>!CLIENTS.includes(c)));
 
@@ -760,6 +766,7 @@ $("#cw-save").addEventListener("click",()=>{
 });
 
 $("#cw-banner-x").addEventListener("click",()=>{$("#cw-banner").hidden=true});
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",closeSheets));
 function updateDateLbl(reset){
   const k=$("#f-kind").value;
   $("#f-date-lbl").textContent=k+"（印字日付）";
