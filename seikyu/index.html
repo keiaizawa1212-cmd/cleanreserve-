@@ -370,6 +370,7 @@ header{
   <div class="grip"></div>
   <h3 id="d-title"></h3>
   <div class="drow"><span class="k">種類</span><span class="v" id="d-kind"></span></div>
+<div class="drow"><span class="k">種類</span><span class="v" id="d-kind"></span></div>
 <div class="drow"><span class="k">担当</span><span class="v" id="d-tanto"></span></div>
   <div class="drow"><span class="k">内容</span><span class="v" id="d-content"></span></div>
   <div class="drow"><span class="k">金額（税込）</span><span class="v big" id="d-amount"></span></div>
@@ -623,6 +624,7 @@ $("#btn-save").addEventListener("click",()=>{
 function openDetail(id){
   const i=items.find(x=>x.id===id);
   $("#d-title").textContent=i.client;
+  $("#d-kind").textContent=i.kind||"請求書";$("#d-date-lbl").textContent=(i.kind||"請求書");
   $("#d-tanto").textContent=i.tanto;$("#d-content").textContent=i.content||"（未入力）";
   $("#d-amount").textContent=i.amount>0?"¥"+fmt(i.amount):"未入力";
   $("#d-date").value=i.date||"";
