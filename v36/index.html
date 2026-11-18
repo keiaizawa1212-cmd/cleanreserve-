@@ -214,6 +214,23 @@ input,select{font:inherit;color:inherit}
 .mfbar{display:flex;flex-wrap:wrap;gap:5px;padding:2px 0 8px}
 .mfchip{border:1.5px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);font-size:12.5px;font-weight:800;padding:3.5px 12px;cursor:pointer}
 .mfchip.on{border-color:var(--blue);background:#e8f0fe;color:var(--blue)}
+.telwrap{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;max-width:860px}
+.telhead{font-weight:800;background:#2b2f3a;color:#fff;border-radius:6px;padding:10px;text-align:center;font-size:15px}
+.fbox{background:var(--lav);border:1px solid #d8ccf2;border-radius:6px;padding:8px 12px;font-weight:800;font-size:13.5px;text-align:center}
+.fbox.sub{text-align:left;font-weight:700}
+.fbox.danger{background:#fdecea;border-color:#f3c1ba;color:#a33}
+.fbox.ok{background:#e7f6ef;border-color:#bfe3cf;color:#0a6b46}
+.fbody{font-size:12.5px;color:#33384a;line-height:1.7;padding:6px 4px 8px}
+.arrow{text-align:center;color:var(--sub);font-size:12px;padding:2px 0}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fcol{border:1px dashed var(--line);border-radius:8px;padding:8px}
+.fcol.warn{background:#fffaf3}
+.fstop{text-align:center;font-weight:800;color:#a33;background:#fdecea;border-radius:6px;padding:6px;font-size:12.5px}
+.chkwrap{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:10px;max-width:860px}
+.chksec b{font-size:13px;color:#2b2f3a;display:block;margin-bottom:4px}
+.chk{display:flex;gap:8px;align-items:center;padding:5px 4px;border-bottom:1px dashed var(--line2);font-size:13px;color:#33384a;cursor:pointer}
+.chk input{width:16px;height:16px;flex:none;accent-color:var(--blue)}
+.chk:has(input:checked){text-decoration:line-through;color:#9aa1b4}
 .monthgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:#fff;border:1px solid var(--line);
   border-radius:8px;padding:8px}
 .mgw{font-size:12px;font-weight:700;text-align:center;padding:5px 0;border-radius:4px;color:#fff;background:#6d7280}
@@ -332,6 +349,7 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
     <button class="tab on" data-view="list">一覧</button>
     <button class="tab" data-view="item">アイテム別</button>
     <button class="tab" data-view="month">カレンダー</button>
+    <button class="tab" data-view="tel">電話対応</button>
   </div>
   <span class="grow"></span>
   <button class="chip demochip" id="demoChip" hidden title="タップするとデモのサンプル予約を消して通常表示に戻ります">デモ画面 ✕</button>
@@ -399,6 +417,62 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
       <div class="mfbar" id="mfBar"></div>
       <div class="datehead"><h2 id="monthTitle"></h2><span class="stat">日をクリックすると一覧が開きます</span></div>
       <div class="monthgrid" id="monthView"></div>
+    </section>
+    <section class="view" data-view="tel" id="telView">
+      <div class="datehead"><h2>📞 新規電話対応フロー</h2><span class="stat">新規受電時の一次対応マニュアル（全員共通）</span></div>
+      <div class="telwrap">
+        <div class="telhead">📞 新規からのお電話（入電・一次受付）</div>
+        <div class="arrow">▼</div>
+        <div class="fbox">◆ 分岐1：ご相談内容（税目）の確認</div>
+        <div class="arrow">▼</div>
+        <div class="split">
+          <div class="fcol"><div class="fbox sub">【相続税】相続税ヒアリング実施</div><div class="fbody">以下4点をもれなくヒアリング：<br>① 土地の個数（筆数・場所）<br>② 相続人の人数・構成<br>③ 有価証券（株式・投信等）の有無<br>④ 現預金の概算額（ざっくり）</div></div>
+          <div class="fcol"><div class="fbox sub">【所得税・法人税】</div><div class="fbody">税目に応じた相談内容の確認へ<br>相手先情報は次のステップで必ず取得</div></div>
+        </div>
+        <div class="arrow">▼</div>
+        <div class="fbox">★ 基本情報のヒアリング（新設）</div>
+        <div class="fbody">会社名・ご連絡先（TEL）・代表者名 など<br>※国籍等だけで即断せず、まず相手先情報を伺って対応可否を判断する</div>
+        <div class="arrow">▼</div>
+        <div class="fbox">◆ 分岐2：新規開業 or 税理士変更</div>
+        <div class="arrow">▼</div>
+        <div class="split">
+          <div class="fcol warn"><div class="fbox sub danger">【新規開業】基本お断り方針</div><div class="fbody">料金目安を提示し辞退を促す：<br>・顧問料：月額 35,000円〜<br>・記帳代：月額 10,000円〜<br>「上記が最低基準となりますがよろしいでしょうか？」</div><div class="fstop">🛑 辞退／了承 → 対応終了</div></div>
+          <div class="fcol"><div class="fbox sub">【税理士変更】</div><div class="fbody">以下5点をもれなくヒアリング：<br>① 税理士の変更理由<br>② 年間売上規模<br>③ 従業員数（役員/正社員/パート）<br>④ 給与計算代行の有無<br>⑤ 記帳代行の有無</div></div>
+        </div>
+        <div class="arrow">▼</div>
+        <div class="fbox ok">受任対象案件の共通引継ぎステップ</div>
+        <div class="arrow">▼</div>
+        <div class="split">
+          <div class="fcol"><div class="fbox sub">💬 Step A：Chatwork等へ即座に共有</div><div class="fbody">【必須】会社名/氏名・TEL・相談区分・ヒアリング詳細・面談希望日時</div></div>
+          <div class="fcol"><div class="fbox sub">📅 Step B：面談日程を決定・確定</div><div class="fbody">候補日確認（電話口 or 折り返し）・来所/オンライン・カレンダー登録</div></div>
+        </div>
+        <div class="arrow">▼</div>
+        <div class="fbox ok last">🏁 一次受電対応・引継ぎ完了</div>
+      </div>
+      <div class="datehead" style="margin-top:14px"><h2>📋 電話対応チェックリスト</h2><span class="stat">電話しながら押して確認（端末ごとに保存）</span><button class="btn sm" id="telReset">チェックをリセット</button></div>
+      <div class="chkwrap">
+        <div class="chksec"><b>▼ 相続税のヒアリング</b>
+          <label class="chk"><input type="checkbox" data-k="a1">土地の個数（筆数・場所）</label>
+          <label class="chk"><input type="checkbox" data-k="a2">相続人の人数・構成</label>
+          <label class="chk"><input type="checkbox" data-k="a3">有価証券（株式・投信等）の有無</label>
+          <label class="chk"><input type="checkbox" data-k="a4">現預金の概算額（ざっくり）</label>
+        </div>
+        <div class="chksec"><b>▼ 税理士変更のヒアリング</b>
+          <label class="chk"><input type="checkbox" data-k="b1">税理士の変更理由</label>
+          <label class="chk"><input type="checkbox" data-k="b2">年間売上規模</label>
+          <label class="chk"><input type="checkbox" data-k="b3">従業員数（役員/正社員/パート）</label>
+          <label class="chk"><input type="checkbox" data-k="b4">給与計算代行の有無</label>
+          <label class="chk"><input type="checkbox" data-k="b5">記帳代行の有無</label>
+        </div>
+        <div class="chksec"><b>▼ Chatwork共有・面談設定</b>
+          <label class="chk"><input type="checkbox" data-k="c1">会社名・氏名をChatworkへ共有</label>
+          <label class="chk"><input type="checkbox" data-k="c2">TELを共有</label>
+          <label class="chk"><input type="checkbox" data-k="c3">相談区分を共有</label>
+          <label class="chk"><input type="checkbox" data-k="c4">ヒアリング詳細を共有</label>
+          <label class="chk"><input type="checkbox" data-k="c5">面談希望日時を確認</label>
+          <label class="chk"><input type="checkbox" data-k="c6">カレンダー登録</label>
+        </div>
+      </div>
     </section>
   </main>
 </div>
@@ -668,12 +742,12 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
 /* ---------- 定数 ---------- */
 var SLOT_MIN = 30, OPEN_MIN = 7*60, CLOSE_MIN = 21*60;
 var SLOTS = (CLOSE_MIN - OPEN_MIN) / SLOT_MIN;
-var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1', uname:'cr.uname.v1', rd:'cr.remDismiss.v1', cli:'cr.clients.v1', rte:'cr.routes.v1' };
+var LS = { res:'cr.reservations.v1', reso:'cr.resources.v1', sync:'cr.sync.v1', cal:'cr.calevents.v1', demo:'cr.demo.v1', uname:'cr.uname.v1', rd:'cr.remDismiss.v1', cli:'cr.clients.v1', rte:'cr.routes.v1', telchk:'cr.telchk.v1' };
 var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 47;
+var APP_VERSION = 48;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -2296,6 +2370,25 @@ function bindStaticEvents(){
   document.getElementById('fFare').addEventListener('input', updExpTotal);
   document.getElementById('fPurpose').addEventListener('input', function(){ var c = document.getElementById('fClient'); if(!c.value) c.value = guessClient(this.value); });
   document.getElementById('fAddExtra').addEventListener('click', function(){ addExtraRow(); updExpTotal(); });
+  function renderTelChk(){
+    var saved={}; try{ saved=JSON.parse(store.getItem(LS.telchk)||'{}')||{}; }catch(e){}
+    Array.prototype.forEach.call(document.querySelectorAll('#telView .chk input'), function(cb){
+      cb.checked = !!saved[cb.getAttribute('data-k')];
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#telView .chk input'), function(cb){
+    cb.addEventListener('change', function(){
+      var saved={}; try{ saved=JSON.parse(store.getItem(LS.telchk)||'{}')||{}; }catch(e){}
+      saved[cb.getAttribute('data-k')] = cb.checked ? 1 : 0;
+      try{ store.setItem(LS.telchk, JSON.stringify(saved)); }catch(e){}
+    });
+  });
+  document.getElementById('telReset').addEventListener('click', function(){
+    Array.prototype.forEach.call(document.querySelectorAll('#telView .chk input'), function(cb){ cb.checked=false; });
+    try{ store.setItem(LS.telchk,'{}'); }catch(e){}
+    toast('チェックをリセットしました');
+  });
+  renderTelChk();
   document.getElementById('fAddDateBtn').addEventListener('click', function(){
     var v=document.getElementById('fAddDate').value;
     if(!v){ toast('日付を選んでください', true); return; }
