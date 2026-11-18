@@ -230,6 +230,15 @@ input,select{font:inherit;color:inherit}
 .chksec b{font-size:13px;color:#2b2f3a;display:block;margin-bottom:4px}
 .chk{display:flex;gap:8px;align-items:center;padding:5px 4px;border-bottom:1px dashed var(--line2);font-size:13px;color:#33384a;cursor:pointer}
 .chk input{width:16px;height:16px;flex:none;accent-color:var(--blue)}
+.hr-row{display:flex;gap:6px;align-items:center;padding:6px 4px;border-bottom:1px dashed var(--line2);font-size:13px;color:#33384a;flex-wrap:wrap}
+.hr-row .lbl{min-width:215px;flex:none}
+.hr-row input[type=text],.hr-row input[type=number]{border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:13px;background:#fff}
+.hr-row select{border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:13px;background:#fff}
+.hear-it{display:flex;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px dashed var(--line2)}
+.hear-it .hn{font-weight:700;color:#22315a;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hear-it .hk{font-size:11px;background:#e8f1ff;color:#2e6fdb;border-radius:4px;padding:1px 6px;font-weight:700;flex:none}
+.hear-it .hd{font-size:11.5px;color:#7a879a;flex:none}
+.hear-it button{font-size:11.5px;padding:3px 8px;flex:none;cursor:pointer}
 .chk:has(input:checked){text-decoration:line-through;color:#9aa1b4}
 .monthgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:#fff;border:1px solid var(--line);
   border-radius:8px;padding:8px}
@@ -473,6 +482,32 @@ ol.steps{padding-left:18px;font-size:12.5px;color:#3c4257;display:grid;gap:4px;m
           <label class="chk"><input type="checkbox" data-k="c5">面談希望日時を確認</label>
           <label class="chk"><input type="checkbox" data-k="c6">カレンダー登録</label>
         </div>
+      </div>
+      <div class="datehead" style="margin-top:14px"><h2>📝 ヒアリングシート（記入式）</h2><span class="stat">電話しながら記入して保存（事務所で共有・クリックで再編集）</span></div>
+      <div class="chkwrap">
+        <div class="chksec"><b>▼ 基本情報</b>
+          <div class="hr-row"><span class="lbl">会社名・お名前</span><input type="text" id="h_name" style="flex:1;min-width:180px" placeholder="例：株式会社◯◯　田中太郎様"></div>
+          <div class="hr-row"><span class="lbl">ご相談区分</span><select id="h_kbn"><option>相続税</option><option>所得税・法人税</option><option>税理士変更</option><option>その他</option></select><span class="lbl" style="min-width:0">受電日</span><input type="date" id="h_date"></div>
+        </div>
+        <div class="chksec"><b>▼ 相続税のヒアリング</b>
+          <div class="hr-row"><span class="lbl">土地の個数（筆数・場所）</span><input type="number" id="h_a1n" style="width:64px">筆<input type="text" id="h_a1p" style="flex:1;min-width:140px" placeholder="場所（例：福岡市◯◯区）"></div>
+          <div class="hr-row"><span class="lbl">相続人の人数・構成</span><input type="number" id="h_a2n" style="width:64px">人<input type="text" id="h_a2c" style="flex:1;min-width:140px" placeholder="例：配偶者＋子2人"></div>
+          <div class="hr-row"><span class="lbl">有価証券（株式・投信等）の有無</span><select id="h_a3y"><option>未確認</option><option>有</option><option>無</option></select><input type="text" id="h_a3v" style="flex:1;min-width:140px" placeholder="金額（ざっくり）"></div>
+          <div class="hr-row"><span class="lbl">現預金の概算額（ざっくり）</span>通帳<input type="number" id="h_a4n" style="width:56px">冊<input type="text" id="h_a4v" style="flex:1;min-width:140px" placeholder="金額（ざっくり）"></div>
+        </div>
+        <div class="chksec"><b>▼ 税理士変更のヒアリング</b>
+          <div class="hr-row"><span class="lbl">税理士の変更理由</span><input type="text" id="h_b1" style="flex:1;min-width:180px" placeholder="記入欄"></div>
+          <div class="hr-row"><span class="lbl">年間売上規模</span><input type="number" id="h_b2" style="width:84px" step="any">億円</div>
+          <div class="hr-row"><span class="lbl">従業員数（役員/正社員/パート）</span>役員<input type="number" id="h_b3a" style="width:52px">人　正社員<input type="number" id="h_b3b" style="width:52px">人　パート<input type="number" id="h_b3c" style="width:52px">人</div>
+          <div class="hr-row"><span class="lbl">給与計算代行の有無</span><select id="h_b4y"><option>未確認</option><option>有</option><option>無</option></select><input type="number" id="h_b4n" style="width:56px">人</div>
+          <div class="hr-row"><span class="lbl">記帳代行の有無</span><select id="h_b5y"><option>未確認</option><option>有</option><option>無</option></select>使用ソフト<input type="text" id="h_b5s" style="flex:1;min-width:120px" placeholder="例：弥生会計"></div>
+        </div>
+        <div style="display:flex;gap:8px;padding:10px 4px;align-items:center">
+          <button class="btn sm" id="hearSave">💾 保存</button>
+          <button class="btn sm" id="hearNew">新規記入</button>
+          <span id="hearMsg" style="font-size:12px;color:#2e9e5b"></span>
+        </div>
+        <div class="chksec"><b>▼ 保存済みヒアリング一覧</b><div id="hearList" style="font-size:12.5px"></div></div>
       </div>
     </section>
   </main>
@@ -748,7 +783,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 51;
+var APP_VERSION = 52;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -1364,6 +1399,58 @@ function renderMonthView(){
 }
 
 var WHO_PAL=['#2e6fdb','#e8853d','#2e9e5b','#8e5bd6','#d6477f','#0e9aa7','#c23a2b','#6b7f2e','#3f51b5','#b06a00'];
+/* ---------- ヒアリングシート ---------- */
+var HEAR_FB='https://cleanreserve-cd29a-default-rtdb.firebaseio.com';
+var HEAR_FIELDS=['name','kbn','date','a1n','a1p','a2n','a2c','a3y','a3v','a4n','a4v','b1','b2','b3a','b3b','b3c','b4y','b4n','b5y','b5s'];
+function hearEl(k){ return document.getElementById('h_'+k); }
+function hearClear(){
+  HEAR_FIELDS.forEach(function(k){ var e=hearEl(k); if(!e) return;
+    if(e.tagName==='SELECT'){ e.selectedIndex=0; } else if(k==='date'){ e.value=todayStr(); } else { e.value=''; } });
+  var m=document.getElementById('hearMsg'); if(m) m.textContent='';
+}
+function hearFill(o){ HEAR_FIELDS.forEach(function(k){ var e=hearEl(k); if(e && o[k]!==undefined) e.value=o[k]; }); }
+function hearSave(){
+  var d={}; HEAR_FIELDS.forEach(function(k){ var e=hearEl(k); d[k]=e?e.value:''; });
+  if(!(d.name||'').trim()){ var m=document.getElementById('hearMsg'); m.style.color='#c23a2b'; m.textContent='会社名・お名前を入力してください'; return; }
+  d.savedAt=new Date().toISOString();
+  var m=document.getElementById('hearMsg');
+  fetch(HEAR_FB+'/hearings.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)})
+    .then(function(r){ if(!r.ok) throw 0; m.style.color='#2e9e5b'; m.textContent='保存しました'; hearClear(); refreshHear(); })
+    .catch(function(){ m.style.color='#c23a2b'; m.textContent='保存に失敗しました'; });
+}
+function refreshHear(){
+  var box=document.getElementById('hearList'); if(!box) return;
+  fetch(HEAR_FB+'/hearings.json').then(function(r){ return r.json(); }).then(function(d){
+    var arr=[]; if(d) Object.keys(d).forEach(function(k){ d[k].__id=k; arr.push(d[k]); });
+    arr.sort(function(a,b){ return String(b.savedAt||'').localeCompare(String(a.savedAt||'')); });
+    if(!arr.length){ box.innerHTML='<div style="color:#98a1b0;padding:6px 4px">保存されたヒアリングはまだありません</div>'; return; }
+    box.innerHTML=arr.map(function(o){
+      return '<div class="hear-it" data-id="'+esc(o.__id)+'"><span class="hn">'+esc(o.name||'(無題)')+'</span><span class="hk">'+esc(o.kbn||'')+'</span><span class="hd">'+esc(o.date||'')+'</span><button class="btn sm" data-act="load">開く</button><button class="btn sm" data-act="del" style="background:#c23a2b">削除</button></div>';
+    }).join('');
+  }).catch(function(){});
+}
+function initHear(){
+  var sv=document.getElementById('hearSave');
+  if(sv && !sv.dataset.b){ sv.dataset.b='1'; sv.addEventListener('click',hearSave); }
+  var nw=document.getElementById('hearNew');
+  if(nw && !nw.dataset.b){ nw.dataset.b='1'; nw.addEventListener('click',hearClear); }
+  var ls=document.getElementById('hearList');
+  if(ls && !ls.dataset.b){ ls.dataset.b='1';
+    ls.addEventListener('click',function(e){
+      var btn=e.target.closest('button'); if(!btn) return;
+      var it=btn.closest('.hear-it'); if(!it) return;
+      var id=it.getAttribute('data-id');
+      if(btn.getAttribute('data-act')==='load'){
+        fetch(HEAR_FB+'/hearings/'+id+'.json').then(function(r){ return r.json(); }).then(function(o){ if(o){ hearFill(o); var m=document.getElementById('hearMsg'); m.style.color='#2e6fdb'; m.textContent='読み込みました（保存で上書きせず新規追加になります）'; } });
+      } else if(btn.getAttribute('data-act')==='del'){
+        if(confirm('このヒアリング記録を削除しますか？')){
+          fetch(HEAR_FB+'/hearings/'+id+'.json',{method:'DELETE'}).then(function(){ refreshHear(); });
+        }
+      }
+    });
+    hearClear(); refreshHear();
+  }
+}
 /* ---------- ビュー切替 ---------- */
 function switchView(name){
   currentView = name;
@@ -1373,6 +1460,7 @@ function switchView(name){
     v.classList.toggle('on', v.getAttribute('data-view')===name); });
   if(name==='list') requestAnimationFrame(fitBoard);
   if(name==='item'){ itemStartDate = state.date; renderItemView(); }
+  if(name==='tel') initHear();
 }
 
 /* ---------- ボード操作（ドラッグ選択 / タップ） ---------- */
