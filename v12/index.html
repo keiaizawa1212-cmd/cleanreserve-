@@ -242,6 +242,7 @@ input,select{font:inherit;color:inherit}
 .mgc b{font-size:12.5px}
 .mgc.sun b{color:var(--sun)}.mgc.sat b{color:var(--sat)}
 .mgc .cnt{display:inline-block;margin-left:4px;font-size:10px;font-weight:700;color:#fff;background:var(--blue);border-radius:8px;padding:0 6px}
+.mgc .who{display:inline-block;font-size:9px;font-weight:700;color:#fff;border-radius:3px;padding:0 3px;margin-right:3px;line-height:13px;vertical-align:1px}
 .mgc .pv{color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nores{padding:30px;text-align:center;color:var(--sub);font-size:13px;font-weight:600}
 
@@ -747,7 +748,7 @@ var RES_COLORS  = ['#1a46d8','#0a8f72','#c2410c','#7c3aed','#b91c5c','#0e7490'];
 /* ★ アプリのバージョン。機能追加でファイルを更新したら、この数字を +1 して配り直す。
    新しい数字のファイルが接続されると、クラウドに記録され、古いファイルを開いている人に
    「新しいバージョンがあります」の警告が出ます。 */
-var APP_VERSION = 50;
+var APP_VERSION = 51;
 var TYPES = [
   { n:'外出',        c:'#1a46d8' },
   { n:'ウェブ打合せ', c:'#ea7317' },
@@ -1321,6 +1322,10 @@ function renderMonthView(){
   var start = new Date(p.y, p.m-1, 1 - first.getDay());
   var daysInMonth = new Date(p.y, p.m, 0).getDate();
   var weeks = Math.ceil((first.getDay() + daysInMonth) / 7);
+  var shorts={}, _cnt={};
+  state.resources.forEach(function(r){ var n=String(r.name||'').replace(/[\s\u3000]+/g,''); shorts[r.id]=n.slice(0,2); (_cnt[shorts[r.id]]=_cnt[shorts[r.id]]||[]).push(r.id); });
+  Object.keys(_cnt).forEach(function(k){ if(_cnt[k].length>1) _cnt[k].forEach(function(rid){ var r=state.resources.filter(function(r){return r.id===rid})[0]||{}; shorts[rid]=String(r.name||'').replace(/[\s\u3000]+/g,'').slice(0,4); }); });
+  var ridx={}; state.resources.forEach(function(r,i){ ridx[r.id]=i; });
   var byDate = {};
   var mf = state.monthFilter || '';
   state.reservations.forEach(function(x){
@@ -1350,13 +1355,15 @@ function renderMonthView(){
          (hn2?'<span class="hol">'+esc(hn2)+'</span>':'')+
          (list.length?'<span class="cnt">'+list.length+'</span>':'');
     list.forEach(function(x){
-      h += '<div class="pv">'+hm(toMin(x.start))+' '+typeIcon(x.type)+(x.purpose?'『'+esc(x.purpose.slice(0,10))+'』':'')+'</div>';
+      var wc = WHO_PAL[(ridx[x.resourceId]||0)%WHO_PAL.length];
+      h += '<div class="pv"><span class="who" style="background:'+wc+'">'+esc(shorts[x.resourceId]||'?')+'</span>'+hm(toMin(x.start))+' '+typeIcon(x.type)+(x.purpose?'『'+esc(x.purpose.slice(0,10))+'』':'')+'</div>';
     });
     h += '</div>';
   }
   document.getElementById('monthView').innerHTML = h;
 }
 
+var WHO_PAL=['#2e6fdb','#e8853d','#2e9e5b','#8e5bd6','#d6477f','#0e9aa7','#c23a2b','#6b7f2e','#3f51b5','#b06a00'];
 /* ---------- ビュー切替 ---------- */
 function switchView(name){
   currentView = name;
