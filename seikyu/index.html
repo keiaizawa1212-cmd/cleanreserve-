@@ -304,7 +304,7 @@ header{
   <header>
     <div class="brand">
       <div class="mark">月</div>
-      <div><h1>月別御勘定書<small>請求書発行フローアプリ <span class="verbadge" id="verNum" title="クリックで最新版を確認">v17</span></small></h1></div>
+      <div><h1>月別御勘定書<small>請求書発行フローアプリ <span class="verbadge" id="verNum" title="クリックで最新版を確認">v18</span></small></h1></div>
     </div>
     <button class="setbtn" id="open-set">⚙ 請求対象をセットする（通常は総務／登記料などのイレギュラー時は担当）</button>
     <div class="monthbar"><label>📅 月ごとに見返す（複数選択可）：</label>
@@ -401,7 +401,7 @@ header{
 <script>
 /* ---------- Firebase（CleanReserve と同じ共有DB・seikyuノード） ---------- */
 const CR_FB_PRESET = {"apiKey":"AIzaSyA1Hz7AmLAdqKO7uZdpB1JAVnenyaHHF3Y","authDomain":"cleanreserve-cd29a.firebaseapp.com","databaseURL":"https://cleanreserve-cd29a-default-rtdb.firebaseio.com","projectId":"cleanreserve-cd29a","storageBucket":"cleanreserve-cd29a.firebasestorage.app","messagingSenderId":"387779264264","appId":"1:387779264264:web:846623d8527ededde776bd"};
-const APP_VERSION = 17;
+const APP_VERSION = 18;
 let itemsRef=null, verRef=null, cfgRef=null, gasRef=null, clientsRef=null, setsRef=null, EXTRA=[], SETS={}, CW_URL="", GAS_URL="", fbReady=false, cwPending=null;
 const ALL=()=>CLIENTS.concat(EXTRA.filter(c=>!CLIENTS.includes(c)));
 
@@ -458,27 +458,33 @@ function stepsHTML(i){
   return h+'</div>';
 }
 let viewMonths=new Set(); /* 空ならすべて表示 */
-function fyOf(i){ /* 事業年度: 10月〜翌9月 */
-  const m=/^(\d{4})年(\d{1,2})月分$/.exec(i.month||""); if(!m)return 0;
-  return +m[1]+(parseInt(m[2])>=10?0:-1);
-}
-function mKey(lb){ const m=/^(\d{4})年(\d{1,2})月分$/.exec(lb||""); return m?+m[1]*12+ +m[2]:0; }
 function monthOptions(){
-  return [...new Set(items.map(i=>i.month).filter(Boolean))].sort((a,b)=>mKey(a)-mKey(b));
+  const setsM=Object.keys(SETS).sort((a,b)=>parseInt(a)-parseInt(b));
+  const itemM=[...new Set(items.map(i=>i.month).filter(Boolean))].sort((a,b)=>mKey(a)-mKey(b));
+  return {setsM,itemM};
 }
 function mdLabel(){
   return viewMonths.size===0?"すべて":viewMonths.size<=2?[...viewMonths].join("、")+" ▾":viewMonths.size+"件選択 ▾";
 }
+function inView(i){
+  if(!viewMonths.size)return true;
+  return [...viewMonths].some(m=>(SETS[m]?SETS[m].includes(i.client):i.month===m));
+}
 function renderMonths(){
   $("#md-btn").textContent=mdLabel();
-  $("#md-panel").innerHTML=monthOptions().map(m=>
-    '<label><input type="checkbox" value="'+m+'" '+(viewMonths.has(m)?'checked':'')+'>'+m+'</label>'
-  ).join("")||'<div style="padding:9px 10px;font-size:13px;color:var(--ink2)">まだ月がありません</div>';
+  const o=monthOptions();
+  let h='<div style="padding:6px 10px 2px;font-size:11px;color:var(--ink2);font-weight:700">申告月（まとめセットと同じ分類）</div>';
+  h+=o.setsM.map(m=>'<label><input type="checkbox" value="'+m+'" '+(viewMonths.has(m)?'checked':'')+'>'+(m.indexOf("所得税")>=0?m:m+"申告")+'</label>').join("");
+  h+='<div style="padding:8px 10px 2px;font-size:11px;color:var(--ink2);font-weight:700">請求月分</div>';
+  h+=o.itemM.map(m=>'<label><input type="checkbox" value="'+m+'" '+(viewMonths.has(m)?'checked':'')+'>'+m+'</label>').join("");
+  $("#md-panel").innerHTML=h;
   $("#md-panel").querySelectorAll("input").forEach(cb=>cb.addEventListener("change",()=>{
     cb.checked?viewMonths.add(cb.value):viewMonths.delete(cb.value);
     $("#md-btn").textContent=mdLabel();
-    renderList();
+    renderAll();
   }));
+}
+
 }
 $("#md-btn").addEventListener("click",e=>{
   e.stopPropagation();
@@ -490,7 +496,7 @@ document.addEventListener("click",e=>{
 
 function renderList(){
   /* 表示順は登録順のまま固定（クリックで並び替わらない） */
-  const shown=items.filter(i=>viewMonths.size===0||viewMonths.has(i.month));
+  const shown=items.filter(i=>inView(i));
   $("#list").innerHTML=shown.length?shown.map(i=>
     '<div class="row'+(i.status==="送付済み"?' cleared':'')+'" tabindex="0" role="button" data-id="'+i.id+'">'+
     stepsHTML(i)+
@@ -697,7 +703,7 @@ function openDetail(id){
   $("#sheet-detail").classList.add("open");openBg();
 }
 function renderSales(){
-  const shown=items.filter(i=>viewMonths.size===0||viewMonths.has(i.month));
+  const shown=items.filter(i=>inView(i));
   $("#sales-scope").textContent=viewMonths.size===0?"（すべての月）":"（"+[...viewMonths].join("・")+"）";
   const per={};
   shown.forEach(i=>{if(i.amount>0){per[i.tanto]=per[i.tanto]||{sum:0,n:0};per[i.tanto].sum+=i.amount;per[i.tanto].n++}});
