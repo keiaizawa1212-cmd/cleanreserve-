@@ -784,10 +784,10 @@ $("#home-btn").addEventListener("click",()=>{
   window.scrollTo(0,0);renderAll();toast("表示をリセットしました");
 });
 $("#btn-sets").addEventListener("click",()=>{
-  const months=Object.keys(SETS).sort((a,b)=>(+a)-(+b));
+  const months=Object.keys(SETS).sort((a,b)=>parseInt(a)-parseInt(b));
   if(!months.length){toast("申告月データがまだありません（CSV返送後に使えます）");return}
   $("#pick").innerHTML='<label class="picked" data-back="1" style="justify-content:center;color:var(--brand)">← 普通のセット画面に戻る</label>'+
-    months.map(m=>'<label class="picked" data-m="'+m+'" style="justify-content:center"><b>'+m+'月申告</b>　'+SETS[m].length+'社</label>').join("");
+    months.map(m=>'<label class="picked" data-m="'+m+'" style="justify-content:center"><b>'+m+(m.indexOf("所得税")>=0?"（別枠）":"申告")+'</b>　'+SETS[m].length+'社</label>').join("");
   $("#pick").querySelectorAll("label").forEach(el=>el.addEventListener("click",()=>{
     if(el.dataset.back){renderPick();return}
     const m=el.dataset.m;
@@ -802,7 +802,7 @@ $("#btn-sets").addEventListener("click",()=>{
     });
     viewMonths=new Set([month]);
     persist();renderPick();closeSheets();renderAll();
-    toast(m+"月申告 "+added+"件をまとめてセットしました（Chatworkで入力依頼を流してください）");
+    toast(m+" "+added+"件をまとめてセットしました（Chatworkで入力依頼を流してください）");
   }));
 });
 
