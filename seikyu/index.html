@@ -466,6 +466,11 @@ function monthOptions(){
 function mdLabel(){
   return viewMonths.size===0?"すべて":viewMonths.size<=2?[...viewMonths].join("、")+" ▾":viewMonths.size+"件選択 ▾";
 }
+function fyOf(i){ /* 事業年度: 10月〜翌9月 */
+  const m=/^(\d{4})年(\d{1,2})月分$/.exec(i.month||""); if(!m)return 0;
+  return +m[1]+(parseInt(m[2])>=10?0:-1);
+}
+function mKey(lb){ const m=/^(\d{4})年(\d{1,2})月分$/.exec(lb||""); return m?+m[1]*12+ +m[2]:0; }
 function inView(i){
   if(!viewMonths.size)return true;
   return [...viewMonths].some(m=>(SETS[m]?SETS[m].includes(i.client):i.month===m));
