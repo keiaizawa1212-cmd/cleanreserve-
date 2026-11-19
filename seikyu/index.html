@@ -304,7 +304,7 @@ header{
   <header>
     <div class="brand">
       <div class="mark">月</div>
-      <div><h1>月別御勘定書<small>請求書発行フローアプリ <span class="verbadge" id="verNum" title="クリックで最新版を確認">v16</span></small></h1></div>
+      <div><h1>月別御勘定書<small>請求書発行フローアプリ <span class="verbadge" id="verNum" title="クリックで最新版を確認">v17</span></small></h1></div>
     </div>
     <button class="setbtn" id="open-set">⚙ 請求対象をセットする（通常は総務／登記料などのイレギュラー時は担当）</button>
     <div class="monthbar"><label>📅 月ごとに見返す（複数選択可）：</label>
@@ -401,7 +401,7 @@ header{
 <script>
 /* ---------- Firebase（CleanReserve と同じ共有DB・seikyuノード） ---------- */
 const CR_FB_PRESET = {"apiKey":"AIzaSyA1Hz7AmLAdqKO7uZdpB1JAVnenyaHHF3Y","authDomain":"cleanreserve-cd29a.firebaseapp.com","databaseURL":"https://cleanreserve-cd29a-default-rtdb.firebaseio.com","projectId":"cleanreserve-cd29a","storageBucket":"cleanreserve-cd29a.firebasestorage.app","messagingSenderId":"387779264264","appId":"1:387779264264:web:846623d8527ededde776bd"};
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 let itemsRef=null, verRef=null, cfgRef=null, gasRef=null, clientsRef=null, setsRef=null, EXTRA=[], SETS={}, CW_URL="", GAS_URL="", fbReady=false, cwPending=null;
 const ALL=()=>CLIENTS.concat(EXTRA.filter(c=>!CLIENTS.includes(c)));
 
@@ -744,7 +744,8 @@ function fallbackChat(full,label){
     const w=window.open(CW_URL,"_blank");
     const bn=$("#cw-banner");
     if(w){bn.hidden=true;toast(label+"（Chatworkを開きました・文面コピー済み）");}
-    else{$("#cw-banner-msg").textContent=label+"・文面コピー済み";$("#cw-link").href=CW_URL;bn.hidden=false;}
+    else{$("#cw-banner-msg").textContent=label+"・文面コピー済み";$("#cw-link").href=CW_URL;bn.hidden=false;
+      setTimeout(()=>{bn.hidden=true;},6000);}
   }else{
     $("#cw-url").value=CW_URL;$("#gas-url").value=GAS_URL;
     $("#sheet-cw").classList.add("open");openBg();
