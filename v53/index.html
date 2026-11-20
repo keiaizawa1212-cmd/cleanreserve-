@@ -2761,6 +2761,48 @@ function bindStaticEvents(){
   phoneTab.after(link);
 })();
 </script>
+<style>
+#board .blk span.mobile-client{display:none}
+@media(max-width:480px){
+  #board .rlabel{min-height:clamp(34px,var(--rowh,42px),42px);padding-top:3px;padding-bottom:3px}
+  #board .blk{display:flex;flex-direction:column;justify-content:center;top:2px;bottom:2px;padding:1px 2px 1px 3px}
+  #board .blk:not(.calblk) .who{display:none}
+  #board .blk b{font-size:10px;line-height:1.15}
+  #board .blk span.mobile-client{display:block;order:-1;flex:none;font-size:11px;line-height:1.2;font-weight:800}
+}
+</style>
+<script>
+(function () {
+  var board = document.getElementById('board');
+  if (!board || typeof renderBoard !== 'function' || renderBoard.mobileClientLabels) return;
+
+  function addMobileClientLabels() {
+    var reservations = new Map();
+    state.reservations.forEach(function (r) { reservations.set(String(r.id), r); });
+    board.querySelectorAll('.blk[data-id]').forEach(function (block) {
+      var reservation = reservations.get(block.getAttribute('data-id'));
+      if (!reservation || block.querySelector('.mobile-client')) return;
+      var client = String(reservation.client || '').trim();
+      var detail = String(reservation.purpose || '').trim().replace(/^〔[^〕]*〕|^\[[^\]]*\]|^［[^］]*］/, '').trim();
+      var label = client || detail;
+      if (!label) return;
+      var span = document.createElement('span');
+      span.className = 'mobile-client';
+      span.textContent = label;
+      block.prepend(span);
+    });
+  }
+
+  var originalRenderBoard = renderBoard;
+  renderBoard = function () {
+    var result = originalRenderBoard.apply(this, arguments);
+    addMobileClientLabels();
+    return result;
+  };
+  renderBoard.mobileClientLabels = true;
+  addMobileClientLabels();
+})();
+</script>
 
 </body>
 </html>
