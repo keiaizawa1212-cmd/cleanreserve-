@@ -2744,5 +2744,23 @@ function bindStaticEvents(){
   if(bo.shot==='detail' && state.reservations.length) openDetail(state.reservations[0].id);
 })();
 </script>
+  <script>
+(function () {
+  var phoneTab = document.querySelector('button.tab[data-view="tel"]');
+  if (!phoneTab || document.getElementById('invoiceLink')) return;
+
+  var link = document.createElement('a');
+  link.id = 'invoiceLink';
+  link.className = 'tab';
+  link.href = 'https://keiaizawa1212-cmd.github.io/gekanjo/';
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = '請求書';
+  link.style.textDecoration = 'none';
+  link.style.whiteSpace = 'nowrap';
+  phoneTab.after(link);
+})();
+</script>
+
 </body>
 </html>
